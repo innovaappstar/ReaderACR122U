@@ -228,10 +228,11 @@ public final class MifareUtils {
         System.out.printf("Sector %02d block %02d: ", sectorId, blockId);
         for (String key : keys) {
             // For each provided key...
+        	//key = "AABBCCDDEEFF";
             if (isValidMifareClassic1KKey(key)) {
                 byte[] keyBytes = hexStringToBytes(key);
                 // Reading with key A
-                MfAccess access = new MfAccess(card, sectorId, blockId, Key.A, keyBytes);
+                MfAccess access = new MfAccess(card, sectorId, blockId, Key.A, keyBytes); 
                 String blockData = readMifareClassic1KBlock(reader, access);
                 if (blockData == null) {
                     // Reading with key B

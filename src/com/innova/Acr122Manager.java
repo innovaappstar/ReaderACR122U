@@ -24,8 +24,11 @@
 package com.innova;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List; 
+import java.util.Scanner;
 
 import javax.smartcardio.CardException;
 
@@ -46,9 +49,12 @@ public class Acr122Manager {
      * @see Acr122Manager#printHelpAndExit() 
      */
     public static void main(String[] args) throws IOException {
-        if (args == null || args.length == 0) {
-            printHelpAndExit();
+        
+    	if (args == null || args.length == 0) {
+            printHelpAndExit(args);
+            //dumpCards(args);
         } 
+        
         switch (args[0]) {
             case "-d":
             case "--dump":
@@ -61,7 +67,7 @@ public class Acr122Manager {
             case "-h":
             case "--help":
             default:
-                printHelpAndExit();
+                printHelpAndExit(args);
                 break;
         }
     }
@@ -71,9 +77,13 @@ public class Acr122Manager {
      * @param card a card
      */
     private static void printCardInfo(MfCard card) {
-        System.out.println("Card detected: "
+    	Date date = new Date(); 
+    	SimpleDateFormat ft = 
+    		      new SimpleDateFormat ("E yyyy.MM.dd 'at' hh:mm:ss");
+    	
+        System.out.println("Tarjeta detectada: "
                 + card.getTagType().toString() + " "
-                + card.toString());
+                + /*card.toString() + */ " <Date> " + ft.format(date));
     }
     
     /**
@@ -82,6 +92,7 @@ public class Acr122Manager {
      */
     private static void listen(MfCardListener listener) throws IOException {
         Acr122Device acr122;
+        
         try {
             acr122 = new Acr122Device();
         } catch (RuntimeException re) {
@@ -103,26 +114,34 @@ public class Acr122Manager {
      */
     private static void dumpCards(String... args) throws IOException {
         // Building the list of keys
+    	System.out.println("Size : " + args.length);
         final List<String> keys = new ArrayList<>();
         for (int i = 1; i < args.length; i++) {
+        	System.out.println("2 : ");
+
             String k = args[i].toUpperCase();
             if (MifareUtils.isValidMifareClassic1KKey(k)) {
                 keys.add(k);
             }
         }
+    	System.out.println("3 : ");
+
         // Adding the common keys
         keys.addAll(MifareUtils.COMMON_MIFARE_CLASSIC_1K_KEYS);
         
         // Card listener for dump
         MfCardListener listener = new MfCardListener() {
             @Override
-            public void cardDetected(MfCard mfCard, MfReaderWriter mfReaderWriter) throws IOException {
-                printCardInfo(mfCard);
+            public void cardDetected(MfCard mfCard, MfReaderWriter mfReaderWriter) throws IOException 
+            {
+                printCardInfo(mfCard); 
+                /*
                 try {
-                    MifareUtils.dumpMifareClassic1KCard(mfReaderWriter, mfCard, keys);
+                    //MifareUtils.dumpMifareClassic1KCard(mfReaderWriter, mfCard, keys);
                 } catch (CardException ce) {
-                    System.out.println("Card removed or not present.");
+                    System.out.println("Tarjeta removida o no esta presente.");
                 }
+                */
             }
         };
         
@@ -137,7 +156,7 @@ public class Acr122Manager {
     private static void writeToCards(String... args) throws IOException {
         // Checking arguments
         if (args.length != 5) {
-            printHelpAndExit();
+            printHelpAndExit(args);
         }
         
         final String sector = args[1];
@@ -148,7 +167,7 @@ public class Acr122Manager {
                 || !MifareUtils.isValidMifareClassic1KBlockIndex(block)
                 || !MifareUtils.isValidMifareClassic1KKey(key)
                 || !HexUtils.isHexString(data)) {
-            printHelpAndExit();
+            printHelpAndExit(args);
         }
         
         final int sectorId = Integer.parseInt(sector);
@@ -173,8 +192,9 @@ public class Acr122Manager {
     
     /**
      * Prints help and exits.
+     * @throws IOException 
      */
-    private static void printHelpAndExit() {
+    private static void printHelpAndExit(String[] args) throws IOException {
         String jarPath = Acr122Manager.class.getProtectionDomain().getCodeSource().getLocation().getFile();
         String jarName = jarPath.substring(jarPath.lastIndexOf('/') + 1);
         
@@ -191,7 +211,22 @@ public class Acr122Manager {
         sb.append("\tjava -jar ").append(jarName).append(" --write 13 2 FF00A1A0B001 FFFFFFFFFFFF00000000060504030201");
         
         System.out.println(sb.toString());
+        Scanner scanner = new Scanner(System.in);
+        int accion = scanner.nextInt();
         
-        System.exit(0);
+        if (accion == 1)
+        {
+        	dumpCards(args);	// LEER
+        }else if (accion == 2)
+        {
+        	writeToCards(args);	// ESCRIBIR
+        }else if (accion == 3)
+        {
+        	System.exit(0);		// SALIR
+        }
+        
+        
+        
+        //System.exit(0);
     }
 }
