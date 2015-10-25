@@ -27,6 +27,7 @@ import static com.innova.HexUtils.bytesToHexString;
 import static com.innova.HexUtils.hexStringToBytes;
 import static com.innova.HexUtils.isHexString;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import javax.smartcardio.CardException;
@@ -61,6 +62,8 @@ public final class MifareUtils {
         "AABBCCDDEEFF",
         "FFFFFFFFFFFF"
     );
+    static List<String> keysMap = null;
+
     
     private MifareUtils() {
     }
@@ -106,12 +109,15 @@ public final class MifareUtils {
      * @param keys the keys to be tested for reading
      */
     public static void dumpMifareClassic1KCard(MfReaderWriter reader, MfCard card, List<String> keys)
-            throws CardException {
+            throws CardException 
+    {
+    	keysMap = new ArrayList<>();
+    	keysMap.addAll(keys);
         for (int sectorIndex = 0; sectorIndex < MIFARE_1K_SECTOR_COUNT; sectorIndex++) {
             // For each sector...
             for (int blockIndex = 0; blockIndex < MIFARE_1K_PER_SECTOR_BLOCK_COUNT; blockIndex++) {
                 // For each block...
-                dumpMifareClassic1KBlock(reader, card, sectorIndex, blockIndex, keys);
+                dumpMifareClassic1KBlock(reader, card, sectorIndex, blockIndex, keysMap);
             }
         }
     }
@@ -188,6 +194,7 @@ public final class MifareUtils {
         try {
             MfBlock block = reader.readBlock(access)[0];
             data = bytesToHexString(block.getData());
+            System.out.println("SIZE --> " + reader.readBlock(access).length);
         } catch (IOException ioe) {
             if (ioe.getCause() instanceof CardException) {
                 throw (CardException) ioe.getCause();
@@ -223,10 +230,12 @@ public final class MifareUtils {
      * @param sectorId the sector to be read
      * @param blockId the block to be read
      * @param keys the keys to be tested for reading
-     */
-    private static void dumpMifareClassic1KBlock(MfReaderWriter reader, MfCard card, int sectorId, int blockId, List<String> keys) throws CardException {
+     */ 
+    private static void dumpMifareClassic1KBlock(MfReaderWriter reader, MfCard card, int sectorId, int blockId, List<String> keysNOUSO) throws CardException {
         System.out.printf("Sector %02d block %02d: ", sectorId, blockId);
-        for (String key : keys) {
+        
+        
+        for (String key : keysMap) {
             // For each provided key...
         	//key = "AABBCCDDEEFF";
             if (isValidMifareClassic1KKey(key)) {
@@ -242,6 +251,7 @@ public final class MifareUtils {
                 if (blockData != null) {
                     // Block read
                     System.out.println(blockData + " (Key " + access.getKey() + ": " + key + ")");
+                    keysMap.set(0, key);	// MOVEMOS EL KEY AL PRINCIPIO PARA EL SIGUIENTE ESCANEO 
                     return;
                 }
             }

@@ -1,0 +1,41 @@
+/build
+# Ignoramos los archivos .iml
+*iml
+*.txt
+
+# ARCHIVOS BUILD DE LA APLICACION
+*.apk
+*.ap_
+
+# ARCHIVOS PARA LA VM DEX
+*.dex
+
+# ARCHIVOS DE CLASE JAVA
+*.class
+
+# ARCHIVOS GENERADOS
+bin/
+gen/
+
+# ARCHIVO DE CONFIGURACION LOCAL (RUTA SDK, ETC)
+local.properties
+
+# Windows thumbnail db
+Thumbs.db
+
+# OSX files
+.DS_Store
+
+# Eclipse project files
+# .classpath
+# .project
+
+# Android Studio
+*.iml
+.idea
+#.idea/workspace.xml - REMOVER # Y ELIMINAR .idea if it better suit your needs.
+.gradle
+build/
+
+#NDK
+obj/

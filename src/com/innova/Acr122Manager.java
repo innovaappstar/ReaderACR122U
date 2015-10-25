@@ -100,7 +100,7 @@ public class Acr122Manager {
             return;
         }
         acr122.open();
-        
+        	
         acr122.listen(listener);
         System.out.println("Press ENTER to exit");
         System.in.read();
@@ -114,7 +114,7 @@ public class Acr122Manager {
      */
     private static void dumpCards(String... args) throws IOException {
         // Building the list of keys
-    	System.out.println("Size : " + args.length);
+    	//System.out.println("Size : " + args.length);
         final List<String> keys = new ArrayList<>();
         for (int i = 1; i < args.length; i++) {
         	System.out.println("2 : ");
