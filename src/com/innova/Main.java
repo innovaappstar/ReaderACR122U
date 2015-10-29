@@ -17,6 +17,7 @@ import org.nfctools.mf.card.MfCard;
 public class Main {
 	
 	final static int[] sectores = new int[2];
+	final static String[] write = new String[5];
 	
 	 
 	public static void main(String[] args)
@@ -59,8 +60,27 @@ public class Main {
         	leerCards(args);	 
         }else if (accion == 2)
         {
-        	String[] params = new String[]{"3","3", "2", "FFFFFFFFFFFF", "HolamundodesdeJava".substring(0, 16)}; 
-        	writeToCards(params);	// ESCRIBIR
+        	//String[] params = new String[]{"3","3", "2", "FFFFFFFFFFFF", "HolamundodesdeJava".substring(0, 16)};  
+        	write[0] = "0";
+        	write[3] = "FFFFFFFFFFFF";
+        	
+        	sb = new StringBuilder();
+        	sb.append("Ingresa # de Sector : ");
+        	System.out.println(sb.toString());
+        	write[1] = scanner.next();
+        	
+        	sb = new StringBuilder();
+        	sb.append("Ingresa # de Bloque : ");
+        	System.out.println(sb.toString());
+        	write[2] = scanner.next();
+        	
+        	sb = new StringBuilder();
+        	sb.append("Ingresa Datos :");
+        	System.out.println(sb.toString());
+        	write[4] = scanner.next().substring(0, 16);
+        	
+        	
+        	writeToCards(write);	// ESCRIBIR
         } 
     }
 	

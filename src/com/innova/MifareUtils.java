@@ -26,11 +26,16 @@ package com.innova;
 import static com.innova.HexUtils.bytesToHexString;
 import static com.innova.HexUtils.hexStringToBytes;
 import static com.innova.HexUtils.isHexString;
+
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
 import javax.smartcardio.CardException;
+
 import org.nfctools.mf.MfAccess;
 import org.nfctools.mf.MfException;
 import org.nfctools.mf.MfReaderWriter;
@@ -182,6 +187,8 @@ public final class MifareUtils {
             // Failed to read block
             System.out.println("<Failed to read block>");
         } else {
+        	byte[] a = hexStringToBytes(blockData);
+        	blockData = new String(a, StandardCharsets.UTF_8);
             // Block read
             System.out.println(blockData + " (Key " + access.getKey() + ": " + key + ")");
 
@@ -195,7 +202,12 @@ public final class MifareUtils {
                 System.out.println(me.getMessage());
             }
             if (written) {
+            	
+
                 blockData = readMifareClassic1KBlock(reader, access);
+                a = hexStringToBytes(blockData);
+            	blockData = new String(a, StandardCharsets.UTF_8);
+            	
                 System.out.print(Main.fechaHora() + " -- Nueva data del bloque: ");
                 if (blockData == null) {
                     // Failed to read block
