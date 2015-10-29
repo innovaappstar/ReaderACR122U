@@ -39,27 +39,32 @@ public class Acr122Device extends AcsTerminal {
     private Acr122ReaderWriter readerWriter;
     
     /**
-     * Constructor.
+     * 	Constructor. (Encontrará Dispositivo ACR122 conectado)
+     *	{@link #setCardTerminal(CardTerminal)} Seteamos el terminal ACR122.
+     *	{@link #readerWriter}	Instanciamos el objeto RW dandole como parámetro un NfcDevice.
      */
     public Acr122Device() {
         CardTerminal terminal = CardTerminalUtils.getTerminalByName("ACR122");
         setCardTerminal(terminal);
-        readerWriter = new Acr122ReaderWriter(this);
+        readerWriter = new Acr122ReaderWriter(this);	// LLamando método de la superClase
     }
-
+    /**
+     *	Método que sera llamado luego de que se haya encontrado el Dispositivo ACR122.  
+     **/
     @Override
     public void open() throws IOException {
         System.out.println("Opening device");
-        super.open();
+        super.open();	// Abre y/o Inicia comunicación con Terminal
     }
-
+   
     /**
      * Start listening for cards using the provided listener.
+     * Inicia listening para tarjetas usando el {@link #listen(MfCardListener)} proveniente.
      * @param listener a listener
      */
     public void listen(MfCardListener listener) throws IOException {
         System.out.println("Listening for cards...");
-        readerWriter.setCardListener(listener);
+        readerWriter.setCardListener(listener);		// LLamando método de la superClase
     }
     
     @Override

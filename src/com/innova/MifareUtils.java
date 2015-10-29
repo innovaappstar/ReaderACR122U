@@ -62,6 +62,10 @@ public final class MifareUtils {
         "AABBCCDDEEFF",
         "FFFFFFFFFFFF"
     );
+    /** Keys Personalizadas */
+    public static final List<String> Claves1K = Arrays.asList("FFFFFFFFFFFF");
+    
+    
     static List<String> keysMap = null;
 
     
@@ -113,13 +117,30 @@ public final class MifareUtils {
     {
     	keysMap = new ArrayList<>();
     	keysMap.addAll(keys);
-        for (int sectorIndex = 0; sectorIndex < MIFARE_1K_SECTOR_COUNT; sectorIndex++) {
+        for (int sectorIndex = 0; sectorIndex < MIFARE_1K_SECTOR_COUNT; sectorIndex++) 
+        {
             // For each sector...
             for (int blockIndex = 0; blockIndex < MIFARE_1K_PER_SECTOR_BLOCK_COUNT; blockIndex++) {
                 // For each block...
                 dumpMifareClassic1KBlock(reader, card, sectorIndex, blockIndex, keysMap);
             }
         }
+    }
+    
+    public static void dumpMifareClassic1KCards(MfReaderWriter readerWriter, MfCard card, List<String> keys, int[] sectores) throws CardException
+    {
+    	keysMap = new ArrayList<>();
+    	keysMap.addAll(keys);
+    	int mDesde	= sectores[0];
+    	int mHasta	= sectores[1];
+    	for (int iSector = mDesde; iSector < mHasta; iSector++)
+    	{
+    		for (int iBloque = 0; iBloque < MIFARE_1K_PER_SECTOR_BLOCK_COUNT; iBloque++) 
+    		{
+    			dumpMifareClassic1KBlock(readerWriter, card, iSector, iBloque, keysMap);
+			}
+    	}
+    	
     }
     
     /**
@@ -137,6 +158,10 @@ public final class MifareUtils {
             System.out.println("The key " + key + "is not valid.");
             return;
         }
+        /**SIMPLE CONVERSIÓN*/
+        byte[] b = dataString.getBytes();
+        dataString = bytesToHexString(b);
+        
         if (!isHexString(dataString)) {
             System.out.println(dataString + " is not an hex string.");
             return;
@@ -151,7 +176,8 @@ public final class MifareUtils {
             access = new MfAccess(card, sectorId, blockId, Key.B, keyBytes);
             blockData = readMifareClassic1KBlock(reader, access);
         }
-        System.out.print("Old block data: ");
+        
+        System.out.print(Main.fechaHora() + " -- Data pasada del bloque: ");
         if (blockData == null) {
             // Failed to read block
             System.out.println("<Failed to read block>");
@@ -170,7 +196,7 @@ public final class MifareUtils {
             }
             if (written) {
                 blockData = readMifareClassic1KBlock(reader, access);
-                System.out.print("New block data: ");
+                System.out.print(Main.fechaHora() + " -- Nueva data del bloque: ");
                 if (blockData == null) {
                     // Failed to read block
                     System.out.println("<Failed to read block>");
@@ -194,11 +220,15 @@ public final class MifareUtils {
         try {
             MfBlock block = reader.readBlock(access)[0];
             data = bytesToHexString(block.getData());
-            System.out.println("SIZE --> " + reader.readBlock(access).length);
-        } catch (IOException ioe) {
-            if (ioe.getCause() instanceof CardException) {
+            //System.out.println("SIZE --> " + reader.readBlock(access).length);
+        } catch (IOException ioe) {   
+        	String linea = "-------------------------------------------------------------------------------\n";
+            //System.out.println(linea + ioe.getMessage().toString() + "\n" + ioe.getCause().getMessage().toString());
+            System.out.println("error : " + ioe.getMessage());
+            if (ioe.getCause() instanceof CardException) { 
                 throw (CardException) ioe.getCause();
-            }
+            } 
+            
         }
         return data;
     }
@@ -233,13 +263,12 @@ public final class MifareUtils {
      */ 
     private static void dumpMifareClassic1KBlock(MfReaderWriter reader, MfCard card, int sectorId, int blockId, List<String> keysNOUSO) throws CardException {
         System.out.printf("Sector %02d block %02d: ", sectorId, blockId);
-        
-        
+         
         for (String key : keysMap) {
             // For each provided key...
         	//key = "AABBCCDDEEFF";
             if (isValidMifareClassic1KKey(key)) {
-                byte[] keyBytes = hexStringToBytes(key);
+                byte[] keyBytes = hexStringToBytes(key); 
                 // Reading with key A
                 MfAccess access = new MfAccess(card, sectorId, blockId, Key.A, keyBytes); 
                 String blockData = readMifareClassic1KBlock(reader, access);
@@ -255,7 +284,7 @@ public final class MifareUtils {
                     return;
                 }
             }
-        }
+        } 
         // All keys tested, failed to read block
         System.out.println("<Failed to read block>");
     }
