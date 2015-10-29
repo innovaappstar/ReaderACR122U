@@ -217,6 +217,7 @@ public final class MifareUtils {
                     System.out.println(blockData + " (Key " + access.getKey() + ": " + key + ")");
                 }
             }
+            Main.ingresarNuevaData();
         }
     }
     

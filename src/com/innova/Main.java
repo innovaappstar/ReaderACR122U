@@ -84,6 +84,15 @@ public class Main {
         } 
     }
 	
+    public static void ingresarNuevaData()
+    {
+    	StringBuilder sb = new StringBuilder();  
+        Scanner scanner = new Scanner(System.in); 
+    	sb.append("---------------------\nIngresa Datos Nuevos:");
+    	System.out.println(sb.toString());
+    	write[4] = scanner.next().substring(0, 16);
+    }
+    
     /**
      * Writes to cards.
      * @param args the arguments of the write command
@@ -113,8 +122,8 @@ public class Main {
             @Override
             public void cardDetected(MfCard mfCard, MfReaderWriter mfReaderWriter) throws IOException {
                 printCardInfo(mfCard);
-                try {
-                    MifareUtils.writeToMifareClassic1KCard(mfReaderWriter, mfCard, sectorId, blockId, key, data);
+                try { 
+                    MifareUtils.writeToMifareClassic1KCard(mfReaderWriter, mfCard, sectorId, blockId, key, write[4].toUpperCase());
                 } catch (CardException ce) {
                     System.out.println("Card removed or not present.");
                 }
@@ -141,10 +150,12 @@ public class Main {
         acr122.open();	// Iniciamos comunicación con Terminal
         	
         acr122.listen(listener);		// 
+        /*
         System.out.println("Press ENTER to exit");
         System.in.read();
         
         acr122.close();
+        */
     }
     
     /**
