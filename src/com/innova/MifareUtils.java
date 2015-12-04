@@ -173,6 +173,9 @@ public final class MifareUtils {
         }
         
         byte[] keyBytes = hexStringToBytes(key);
+        // key Desarrollo
+        keyBytes = getClaveA();
+        
         // Reading with key A
         MfAccess access = new MfAccess(card, sectorId, blockId, Key.A, keyBytes);
         String blockData = readMifareClassic1KBlock(reader, access);
@@ -195,7 +198,11 @@ public final class MifareUtils {
             // Writing with same key
             boolean written = false;
             try {
+            	// ESCRIBIR DATA ENVÍADA POR EL USUARIO
                 byte[] data = hexStringToBytes(dataString);
+                // ESCRIBIR NUEVO PASSWORD EN EL SECTOR TRAILER
+                //data = passwordDesarrollo();
+                
                 MfBlock block = BlockResolver.resolveBlock(MemoryLayout.CLASSIC_1K, sectorId, blockId, data);
                 written = writeMifareClassic1KBlock(reader, access, block);
             } catch (MfException me) {
@@ -220,6 +227,54 @@ public final class MifareUtils {
             Main.ingresarNuevaData();
         }
     }
+    /***
+     * Password Simple Desarrollo 
+     * @return un byte[]
+     */
+    public static byte[] passwordDesarrollo()
+    {
+    	byte[] dtPassword = {	// KEY A 	0x2D
+				(byte) 0x2D ,	
+				(byte) 0x2D ,
+				(byte) 0x2D ,
+				(byte) 0x2D ,
+				(byte) 0x2D ,
+				(byte) 0x2D ,
+				
+				// ACCESS BITS	( 0 - 3 - 2 - 4)
+				(byte) 0xFF ,	// TRANSPORT CONFIGURATION
+				(byte) 0x07 ,	// TRANSPORT CONFIGURATION
+				(byte) 0x80 ,	// TRANSPORT CONFIGURATION
+				(byte) 0xFF , 	// USO GENERAL	DEFAULT
+				
+				// KEY B	0x3D
+				(byte) 0x3D ,	
+				(byte) 0x3D ,
+				(byte) 0x3D ,
+				(byte) 0x3D ,
+				(byte) 0x3D ,
+				(byte) 0x3D }; 
+    	return dtPassword;
+    }
+    /**
+     * Password simple de autenticación.
+     * @return un byte[]
+     */
+	public static byte[] getClaveA()
+	{
+		byte[] dtPassword = {	// KEY A 	0x2D
+				(byte) 0x2D ,	
+				(byte) 0x2D ,
+				(byte) 0x2D ,
+				(byte) 0x2D ,
+				(byte) 0x2D ,
+				(byte) 0x2D };
+		return dtPassword;
+		
+	}
+    
+    
+    
     
     /**
      * Reads a Mifare Classic 1K block.
