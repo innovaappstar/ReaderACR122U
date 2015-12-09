@@ -27,6 +27,7 @@ import static com.innova.HexUtils.bytesToHexString;
 import static com.innova.HexUtils.hexStringToBytes;
 import static com.innova.HexUtils.isHexString;
 
+import java.awt.print.Printable;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
@@ -44,6 +45,8 @@ import org.nfctools.mf.block.MfBlock;
 import org.nfctools.mf.card.MfCard;
 import org.nfctools.mf.classic.Key;
 import org.nfctools.mf.classic.MemoryLayout;
+
+import com.aes.AES;
 
 /**
  * Mifare utility class.
@@ -158,23 +161,26 @@ public final class MifareUtils {
      * @param dataString the data hex string to be written
      */
     public static void writeToMifareClassic1KCard(MfReaderWriter reader, MfCard card, int sectorId, int blockId, String key, String dataString)
-            throws CardException {
+            throws CardException 
+            {
+    	AES aes = new AES(); 
+    	byte[] cipher = null;
         if (!isValidMifareClassic1KKey(key)) {
             System.out.println("The key " + key + "is not valid.");
             return;
         }
         /**SIMPLE CONVERSIÓN*/
-        byte[] b = dataString.getBytes();
-        dataString = bytesToHexString(b);
-        
+        //byte[] b = dataString.getBytes();
+        //dataString = bytesToHexString(b);
+        /*
         if (!isHexString(dataString)) {
             System.out.println(dataString + " is not an hex string.");
             return;
         }
-        
+        */
         byte[] keyBytes = hexStringToBytes(key);
         // key Desarrollo
-        keyBytes = getClaveA();
+        //keyBytes = getClaveA();
         
         // Reading with key A
         MfAccess access = new MfAccess(card, sectorId, blockId, Key.A, keyBytes);
@@ -194,23 +200,31 @@ public final class MifareUtils {
         	blockData = new String(a, StandardCharsets.UTF_8);
             // Block read
             System.out.println(blockData + " (Key " + access.getKey() + ": " + key + ")");
-
+            	
             // Writing with same key
             boolean written = false;
             try {
             	// ESCRIBIR DATA ENVÍADA POR EL USUARIO
                 byte[] data = hexStringToBytes(dataString);
+                // APLICAMOS CIFRADO 
+                
+        		// ENCRIPTAR 
+				cipher = aes.encrypt(dataString, Main.encryptionKey);
+                
                 // ESCRIBIR NUEVO PASSWORD EN EL SECTOR TRAILER
                 //data = passwordDesarrollo();
+                // ESCRIBE DATO SIN CIFRADO
+                //MfBlock block = BlockResolver.resolveBlock(MemoryLayout.CLASSIC_1K, sectorId, blockId, data);
+                // ESCRIBIMOS DATA CON CIFRADO
+                MfBlock block = BlockResolver.resolveBlock(MemoryLayout.CLASSIC_1K, sectorId, blockId, cipher);
                 
-                MfBlock block = BlockResolver.resolveBlock(MemoryLayout.CLASSIC_1K, sectorId, blockId, data);
                 written = writeMifareClassic1KBlock(reader, access, block);
             } catch (MfException me) {
                 System.out.println(me.getMessage());
-            }
-            if (written) {
-            	
-
+            } catch (Exception e) { 
+				e.printStackTrace();
+			}
+            if (written) { 
                 blockData = readMifareClassic1KBlock(reader, access);
                 a = hexStringToBytes(blockData);
             	blockData = new String(a, StandardCharsets.UTF_8);
@@ -221,7 +235,16 @@ public final class MifareUtils {
                     System.out.println("<Failed to read block>");
                 } else {
                     // Block read
-                    System.out.println(blockData + " (Key " + access.getKey() + ": " + key + ")");
+                	String decrypted = "";
+                	try {
+						decrypted = aes.decrypt(cipher, Main.encryptionKey);
+					} catch (Exception e) 
+					{ 
+						e.printStackTrace();
+					}
+                    System.out.println(decrypted + " (Key " + access.getKey() + ": " + key + ")");
+                    //System.out.println(blockData + " (Key " + access.getKey() + ": " + key + ")");
+                    
                 }
             }
             Main.ingresarNuevaData();
@@ -287,7 +310,17 @@ public final class MifareUtils {
         String data = null;
         try {
             MfBlock block = reader.readBlock(access)[0];
+            
             data = bytesToHexString(block.getData());
+            /*
+            String dataTrasladada = "9E71C35D7266B5BF3D4A6A5256C91759";
+            // DESENCRIPTANDO..
+            byte[] byteCifrado = hexStringToBytes(dataTrasladada);
+            AES aes = new AES();
+            
+            String decrypted = aes.decrypt(byteCifrado, Main.encryptionKey);
+            Main.printLog("Texto desencriptado CIPHER >> " + decrypted);
+            */
             //System.out.println("SIZE --> " + reader.readBlock(access).length);
         } catch (IOException ioe) {   
         	String linea = "-------------------------------------------------------------------------------\n";
@@ -295,9 +328,11 @@ public final class MifareUtils {
             System.out.println("error : " + ioe.getMessage());
             if (ioe.getCause() instanceof CardException) { 
                 throw (CardException) ioe.getCause();
-            } 
-            
-        }
+            }  
+        } catch (Exception e) 
+        { 
+			e.printStackTrace();
+		}
         return data;
     }
     
@@ -336,7 +371,11 @@ public final class MifareUtils {
             // For each provided key...
         	//key = "AABBCCDDEEFF";
             if (isValidMifareClassic1KKey(key)) {
-                byte[] keyBytes = hexStringToBytes(key); 
+                // CLAVES LISTADO
+            	byte[] keyBytes = hexStringToBytes(key);
+            	// CLAVE A DESARROLLO
+                //byte[] keyBytes = getClaveA(); 
+                
                 // Reading with key A
                 MfAccess access = new MfAccess(card, sectorId, blockId, Key.A, keyBytes); 
                 String blockData = readMifareClassic1KBlock(reader, access);

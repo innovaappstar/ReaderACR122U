@@ -10,6 +10,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Random;
 import java.util.Scanner;
 
 import javax.smartcardio.CardException;
@@ -21,7 +22,7 @@ import org.nfctools.mf.card.MfCard;
 import com.aes.AES;
 
 
-public class Main {
+public class MainPrincipal {
 	
 	final static int[] sectores = new int[2];
 	final static String[] write = new String[5];
@@ -32,26 +33,167 @@ public class Main {
 	//private static String plaintext = "test text 123\0\0\0"; /*Note null padding*/
 	private static String plaintext = "1234567890123456"; /*Note null padding*/
 	public static String encryptionKey = "0123456789abcdef";
-	/**
-	 * SECTOR 21  
-	 **/
-	/**
-	 * Tamanio : 16 bytes...
-	 * 10.20
-	 * 1020.2500502520 
-	 **/
-	private static byte[] KEY_B_SECTOR_0 = new byte[]{(byte)0x1F,(byte)0xC2,(byte)0x35,(byte)0xAC,(byte)0x13,(byte)0x09};
-	private static byte[] KEY_B_SECTOR_8 = new byte[]{(byte)0x64,(byte)0xE3,(byte)0xC1,(byte)0x03,(byte)0x94,(byte)0xC2};
-	private static byte[] DATA_CARGA_B21 = new byte[]{(byte)0x10,(byte)0x27,(byte)0x00,(byte)0x00,(byte)0xef,(byte)0xd8,(byte)0xff,(byte)0xff,(byte)0x10,(byte)0x27,(byte)0x00,(byte)0x00,(byte)0x21,(byte)0xde,(byte)0x21,(byte)0xde};
-	private static byte[] DATA_CARGA_B22 = new byte[]{(byte)0x10,(byte)0x27,(byte)0x00,(byte)0x00,(byte)0xef,(byte)0xd8,(byte)0xff,(byte)0xff,(byte)0x10,(byte)0x27,(byte)0x00,(byte)0x00,(byte)0x22,(byte)0xdd,(byte)0x22,(byte)0xdd};
 	
-	 
+	/**
+	 * DEFINICIÓN DE SECTORES A TRABAJAR 
+	 **/
+	public static int SECTOR_L01 = 0x01; 	// ISALDO
+	public static int SECTOR_L02 = 0x02; 	// ITRANSACCION
+	public static int SECTOR_L03 = 0x03; 	// IPRFM
+	public static int SECTOR_L04 = 0x04; 	// DETALLE 
+	
+	/**
+	 * DEFINICIÓN DE BLOQUES A TRABAJAR 
+	 **/
+	public static int BLOQUE_L01 = 0x02;	// BSALDO
+	public static int BLOQUE_L02 = 0x01;	// BTRANSACCION
+	public static int BLOQUE_L03 = 0x02;	// BPRFM
+	public static int BLOQUE_L04 = 0x00;	// CÓDIGO DE TARJETA - DNI 
+	
+	/**
+	 * LIMITANTES PARA LOS FORMATOS DE VALORES EN LA TARJETA
+	 * DECIMAS LUEGO DE LA COMA
+	 **/
+	//public static String STR_SALDO_FORMAT 		= "000000#000000#00"; //"0000000000000000";
+	public static String MON_FORMAT = "%.2f"; 
+	
+	public static String STR_TRANSACCION_FORMAT	= "00000#0000#00000"; //"0000000000000000";
+	
+	
+	
+	/**
+	 * RETORNO VACIO 
+	 **/
+	public static String VACIO = ""; 
+
+	
+	
+	
 	public static void main(String[] args)
 	{ 
 		try {
 			mostrarOpciones(args);
 		} catch (IOException e) {}
 	}
+	
+	/**
+	 * @param min int valor mínimo del rango.
+	 * @param max int valor máximo del rango.
+	 * @return String hex al azar. 
+	 **/
+	
+	public static String randHex(int min, int max, int capacity) 
+	{ 
+	    Random rand = new Random(); 
+	    //	nextInt normalmente es exclusiva del valor superior,
+	    // por lo que añadir 1 para que sea incluido
+	    // Por encima de fórmula voluntad genera un entero aleatorio en un rango entre el mínimo (inclusive) y máximo (inclusive).
+	    int num = rand.nextInt((max - min) + 1) + min;  
+	    StringBuilder hexRandom = new StringBuilder(Integer.toHexString(num));
+	    
+	    if (hexRandom.length() != 6)
+	    	return VACIO;	// HEXADECIMAL NO PERMITIDO 
+	    
+	    hexRandom.setLength(capacity);
+	    return hexRandom.toString();
+	}
+	
+	/**
+	 * @param m float es el monto.
+	 * @param k String es la key.
+	 * @return String de 16 bytes.
+	 */
+	public static String formatSaldo(float m, String k)
+	{
+		if (m > 999f) 
+			return VACIO;	// <<ERROR CODE 15 : FLOAT EXCEDIO DEL LÍMITE>>
+		
+		// PARSEAMOS FLOAT A DECIMAL
+		String f = String.format(MON_FORMAT, m).replace(",", "");
+		// CONVERTIMOS DECIMAL A HEX 
+		f	= Integer.toHexString(Integer.valueOf(f));
+		
+		StringBuilder strb = new StringBuilder(STR_TRANSACCION_FORMAT);
+		int start 	= 5 - f.length();	// 4 -> 1.25
+		int end		= 5;
+		String str	= f;
+		
+		// simple conversión
+		printLog((Integer.decode("0x" + f)) + " << decimal convertido..");
+		// BSALDO-01 SALDO
+		strb.replace(start, end, str); 
+		
+		// BSALDO-02 BYTES DE INTEGRIDAD
+		start 		= 6;
+		end			= 10;
+		str			= randHex(2222222, 9999999, 0x04); 
+		if (str.length() == 0)
+		{
+			return VACIO;
+		}
+		
+		strb.replace(start, end, str);
+		
+		strb.setLength(16);
+		
+		return strb.toString();
+	}
+	
+	/**
+	 *  @param m float que simbolizará la nueva transacción.
+	 *  @param k String que contendra la key
+	 *  @return String {@link #formatTransacciones(float, String)}
+	 **/
+	public static String formatTransacciones(float m, String k)
+	{
+		if (m > 999f) 
+			return VACIO;	// <<ERROR CODE 15 : FLOAT EXCEDIO DEL LÍMITE>>
+		  
+		String f = "";
+		// VALIDAR QUE SI NO CONTIENE UNA COMA ","
+		f 	= String.format(MON_FORMAT, m).replace(",", "");
+		f	= Integer.toHexString(Integer.valueOf(f));
+
+		StringBuilder strb = new StringBuilder(STR_TRANSACCION_FORMAT);
+		int start 	= 5 - f.length();	 
+		int end		= 5;
+		String str	= f;
+		
+		// simple conversión
+		printLog((Integer.decode("0x" + f)) + " << decimal convertido.."); 
+		// BSALDO-01 SALDO
+		strb.replace(start, end, str); 
+		
+		// BSALDO-02 BYTES DE INTEGRIDAD
+		start 		= 6;
+		end			= 10;
+		str			= randHex(2222222, 9999999, 0x04); 
+		if (str.length() == 0)
+		{
+			return VACIO;
+		}
+		
+		strb.replace(start, end, str);
+		
+		// TRANSACCION ACTUAL 
+		f 	= String.format(MON_FORMAT, m).replace(",", "");
+		f	= Integer.toHexString(Integer.valueOf(f));
+
+		start 	= 16 - f.length();	 
+		end		= 16;
+		str		= f;
+		 
+		// BSALDO-01 SALDO
+		strb.replace(start, end, str); 
+		
+		printLog(strb.length() + " << Size StringBuilder");
+		strb.setLength(16);
+		
+		return strb.toString();
+	}
+	
+	
+	
 	
     /**
      * Prints help and exits.
@@ -64,13 +206,11 @@ public class Main {
         Scanner scanner = new Scanner(System.in);
          
         sb.append("\t-(1), --Leer [KEYS...]\t\t Mifare Classic 1K cards\n");
-        sb.append("\t-(2), --Escribir\tMifare Classic 1K cards using\n");
-        sb.append("\t-(3), --Encrypt(AES)\tEncryption AES\n");
-        sb.append("\t-(4), --Operadores\tDesplazamiento de bits\n");
+        sb.append("\t-(2), --Escribir\tMifare Classic 1K cards using\n"); 
+        sb.append("\t-(3), --Random\tDevolver BYTES DE INTEGRIDAD\n"); 
         sb.append("\t-Ingresar #Función"); 
         System.out.println(sb.toString());
-        
-        
+         
         int accion = scanner.nextInt();
         
         if (accion == 1)	// LECTURA	DE BLOQUES
@@ -112,57 +252,23 @@ public class Main {
         } else if (accion == 3)
         {
         	sb = new StringBuilder();
-        	sb.append("Encriptando.... " + plaintext + plaintext + plaintext + plaintext + plaintext + plaintext);
-        	//System.out.println(sb.toString());
-        	printLog(sb.toString());
-        	try 
+        	 
+        	//printLog(sb.toString());
+        	String salida = formatTransacciones(0f, "KEYKEY");
+        	if (salida.length() > 0)
         	{
-        		AES aes = new AES();
-        		plaintext = plaintext + plaintext + plaintext + plaintext + plaintext + plaintext;
-        		// ENCRIPTAR 
-				byte[] cipher = aes.encrypt(plaintext, encryptionKey);
-				String str = new String(cipher, StandardCharsets.UTF_8);
-				printLog("Valor de texto (STANDARDCHARSETS.UTF8): " + str + " -- TAMANIO : " + cipher.length); 
-				
-				// DESENCRIPTANDO... 
-				String decrypted = aes.decrypt(cipher, encryptionKey);
-				printLog("decrypt: " + decrypted);
-			} catch (Exception e) {
-				printLog("Error" + e.getMessage().toString());
-			}
-        	printLog("Intruccion finalizada... ");
-
+        		printLog(salida);
+        	}else
+        	{
+        		printLog("OCURRIÓ UN ERROR");
+        	}
+        	  
         } else if (accion == 4) 	// TRABAJANDO CON LOS OPERADORES DE BITS...
         { 
-        	// ELIMINE CODE...
-        	 String dataTrasladada = "9E71C35D7266B5BF3D4A6A5256C91759";
-             // DESENCRIPTANDO..
-             byte[] byteCifrado = hexStringToBytes(dataTrasladada);
-             AES aes = new AES();
-             
-             String decrypted = "";
-			try {
-				decrypted = aes.decrypt(byteCifrado, Main.encryptionKey);
-			} catch (Exception e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-             Main.printLog("Texto desencriptado CIPHER >> " + decrypted);
              
         }
     }  
-    
-    /*
-    private int getValorHex(int i)
-    {
-    	int bitmask = 0x000F;
-    	//int valor 	= (byte)()
-    	int bits = Float.floatToIntBits(inData);
-    	
-    	return 
-    }
-    */
-    
+ 
  
     
     public static void printLog(String data)
@@ -183,7 +289,8 @@ public class Main {
      * Writes to cards.
      * @param args the arguments of the write command
      */
-    private static void writeToCards(String... args) throws IOException {
+    private static void writeToCards(String... args) throws IOException 
+    {
         // Checking arguments
         if (args.length != 5) { 
         }
@@ -225,10 +332,12 @@ public class Main {
      * Listens PARA CARDS USANDO EL LISTENER PROPORCIONADO.
      * @param listener a listener
      */
-    private static void listen(MfCardListener listener) throws IOException {
+    private static void listen(MfCardListener listener) throws IOException 
+    {
         Acr122Device acr122;
         
-        try {
+        try 
+        {
             acr122 = new Acr122Device();	// Busca Terminal ACR 122
         } catch (RuntimeException re) {
             System.out.println("No ACR122 reader found.");
@@ -259,31 +368,36 @@ public class Main {
      * Leer cards.
      * @param args the arguments of the dump command
      */
-    private static void leerCards(String... args) throws IOException {
+    private static void leerCards(String... args) throws IOException 
+    {
         // Building the list of keys
     	//System.out.println("Size : " + args.length);
         final List<String> keys = new ArrayList<>();
-        for (int i = 1; i < args.length; i++) { 
-
-            String k = args[i].toUpperCase();
-            if (MifareUtils.isValidMifareClassic1KKey(k)) {
-                keys.add(k);
-            }
+        for (int i = 1; i < args.length; i++) 
+        { 
+	        String k = args[i].toUpperCase();
+	        if (MifareUtils.isValidMifareClassic1KKey(k)) 
+	        {
+	            keys.add(k);
+	        }
         } 
 
         // Adding the common keys
         keys.addAll(MifareUtils.Claves1K);
         
         // Card listener for dump
-        MfCardListener listener = new MfCardListener() {
+        MfCardListener listener = new MfCardListener() 
+        {
             @Override
             public void cardDetected(MfCard mfCard, MfReaderWriter mfReaderWriter) throws IOException 
             {
                 printCardInfo(mfCard); 
                 
-                try {
+                try 
+                {
                     MifareUtils.dumpMifareClassic1KCards(mfReaderWriter, mfCard, keys, sectores);
-                } catch (CardException ce) {
+                } catch (CardException ce) 
+                {
                     System.out.println("Tarjeta removida o no esta presente.");
                 }
                 
@@ -293,11 +407,7 @@ public class Main {
         // Iniciar listening
         listen(listener);
     }
-    
-    
-    
-    
-    
+     
     
     /**
      *	@return String  FECHA HORA FORMATEADA
