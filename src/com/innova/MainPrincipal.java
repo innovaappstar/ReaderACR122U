@@ -8,6 +8,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
@@ -59,6 +60,14 @@ public class MainPrincipal {
 	
 	public static String STR_TRANSACCION_FORMAT	= "00000#0000#00000"; //"0000000000000000";
 	
+	/**
+	 * KEYS DE DESARROLLO 
+	 **/
+	//public static int KEY_SECTOR_L01	= 0x01;	// ISALDO 
+	public static byte[] SECTOR_TRAILER_L01 	= new byte[]{	(byte)0x1E15E,(byte)0xAA0E,(byte)0x107CE,(byte)0x2A12D,(byte)0x221456,(byte)0x5B88,
+																(byte)0xFC,(byte)0x37,(byte)0x80,(byte)0xFF,	// ACCESS BITS	( 2 - 2 - 0 - 4) 0 = TRANSPORT CONFIGURATION
+																(byte)0x5A48,(byte)0x4BD,(byte)0x2F64,(byte)0x302D,(byte)0x54B7,(byte)0x15EB0};
+	 
 	
 	
 	/**
@@ -264,12 +273,57 @@ public class MainPrincipal {
         	}
         	  
         } else if (accion == 4) 	// TRABAJANDO CON LOS OPERADORES DE BITS...
-        { 
-             
+        {  
+             printLog(KEY(IDKEY.KEY_B).length + " << SECTOR TRAILER SIZE ");
         }
     }  
- 
- 
+    
+    /**
+     * @param idkey IDKEY enum identificador...
+     * Simple función que devolverá un byte array 
+     * con el tipo de clave que se soliscito. 
+     * @return byte[] A or B
+     **/
+    public static byte[] KEY(IDKEY idkey)
+    {
+    	// KEY A - DEFAULT
+    	int start 	= 0;
+    	int end		= 6;
+    	switch (idkey) 
+    	{
+		case KEY_A:
+			start 	= 0;
+			end		= 6;
+			break;
+		case KEY_B:
+			start 	= 10;
+			end		= 16;  
+			break;
+		}  
+    	return Arrays.copyOfRange(SECTOR_TRAILER_L01, start, end);
+    }
+    
+    /**
+     * Simple enum para devolver identificador de key 
+     **/
+    public enum IDKEY
+    {
+    	KEY_A	(1),
+    	KEY_B	(2);
+    	
+    	private int n;
+    	private IDKEY(int n) 
+    	{
+			// TODO Auto-generated constructor stub
+    		this.n = n;
+		}
+    	public int getInt()
+    	{
+    		return n;
+    	}
+    }
+    
+    
     
     public static void printLog(String data)
     {

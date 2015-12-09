@@ -47,6 +47,7 @@ import org.nfctools.mf.classic.Key;
 import org.nfctools.mf.classic.MemoryLayout;
 
 import com.aes.AES;
+import com.innova.MainPrincipal.IDKEY;
 
 /**
  * Mifare utility class.
@@ -213,10 +214,13 @@ public final class MifareUtils {
                 
                 // ESCRIBIR NUEVO PASSWORD EN EL SECTOR TRAILER
                 //data = passwordDesarrollo();
+				// ESCRIBIMOS NUEVO SECTOR TRAILER
+				//data = MainPrincipal.SECTOR_TRAILER_L01;
+				
                 // ESCRIBE DATO SIN CIFRADO
-                //MfBlock block = BlockResolver.resolveBlock(MemoryLayout.CLASSIC_1K, sectorId, blockId, data);
+                MfBlock block = BlockResolver.resolveBlock(MemoryLayout.CLASSIC_1K, sectorId, blockId, data);
                 // ESCRIBIMOS DATA CON CIFRADO
-                MfBlock block = BlockResolver.resolveBlock(MemoryLayout.CLASSIC_1K, sectorId, blockId, cipher);
+                //MfBlock block = BlockResolver.resolveBlock(MemoryLayout.CLASSIC_1K, sectorId, blockId, cipher);
                 
                 written = writeMifareClassic1KBlock(reader, access, block);
             } catch (MfException me) {
@@ -372,10 +376,13 @@ public final class MifareUtils {
         	//key = "AABBCCDDEEFF";
             if (isValidMifareClassic1KKey(key)) {
                 // CLAVES LISTADO
-            	byte[] keyBytes = hexStringToBytes(key);
+            	//byte[] keyBytes = hexStringToBytes(key);
             	// CLAVE A DESARROLLO
                 //byte[] keyBytes = getClaveA(); 
-                
+                // CLAVE A DESARROLLO
+            	byte[] keyBytes = MainPrincipal.KEY(IDKEY.KEY_A); 
+            	
+            	
                 // Reading with key A
                 MfAccess access = new MfAccess(card, sectorId, blockId, Key.A, keyBytes); 
                 String blockData = readMifareClassic1KBlock(reader, access);
