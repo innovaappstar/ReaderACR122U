@@ -179,6 +179,9 @@ public class Main {
     	write[4] = scanner.next().substring(0, 16);
     }
     
+    
+    
+    
     /**
      * Writes to cards.
      * @param args the arguments of the write command

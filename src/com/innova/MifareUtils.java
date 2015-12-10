@@ -80,7 +80,7 @@ public final class MifareUtils {
     
     private MifareUtils() {
     }
-    
+    //region validando is mifare
     /**
      * @param s a string
      * @return true if the provided string is a valid Mifare Classic 1K key, false otherwise
@@ -114,6 +114,7 @@ public final class MifareUtils {
             return false;
         }
     }
+    //endregion
     
     /**
      * Dumps a Mifare Classic 1K card.
@@ -129,7 +130,8 @@ public final class MifareUtils {
         for (int sectorIndex = 0; sectorIndex < MIFARE_1K_SECTOR_COUNT; sectorIndex++) 
         {
             // For each sector...
-            for (int blockIndex = 0; blockIndex < MIFARE_1K_PER_SECTOR_BLOCK_COUNT; blockIndex++) {
+            for (int blockIndex = 0; blockIndex < MIFARE_1K_PER_SECTOR_BLOCK_COUNT; blockIndex++) 
+            {
                 // For each block...
                 dumpMifareClassic1KBlock(reader, card, sectorIndex, blockIndex, keysMap);
             }
@@ -182,11 +184,16 @@ public final class MifareUtils {
         byte[] keyBytes = hexStringToBytes(key);
         // key Desarrollo
         //keyBytes = getClaveA();
+        // KEY DESARROLLO NFC
+        keyBytes = MainPrincipal.KEY(IDKEY.KEY_A);
+        //keyBytes = MainPrincipal.KEY(IDKEY.KEY_A);
+        
         
         // Reading with key A
         MfAccess access = new MfAccess(card, sectorId, blockId, Key.A, keyBytes);
         String blockData = readMifareClassic1KBlock(reader, access);
-        if (blockData == null) {
+        if (blockData == null) 
+        {
             // Reading with key B
             access = new MfAccess(card, sectorId, blockId, Key.B, keyBytes);
             blockData = readMifareClassic1KBlock(reader, access);
@@ -200,25 +207,30 @@ public final class MifareUtils {
         	byte[] a = hexStringToBytes(blockData);
         	blockData = new String(a, StandardCharsets.UTF_8);
             // Block read
-            System.out.println(blockData + " (Key " + access.getKey() + ": " + key + ")");
+        	//System.out.println(blockData + " (Key " + access.getKey() + ": " + key + ")");
+        	System.out.println(blockData);
             	
             // Writing with same key
             boolean written = false;
-            try {
+            try 
+            {
             	// ESCRIBIR DATA ENVÍADA POR EL USUARIO
                 byte[] data = hexStringToBytes(dataString);
                 // APLICAMOS CIFRADO 
                 
         		// ENCRIPTAR 
-				cipher = aes.encrypt(dataString, Main.encryptionKey);
-                
-                // ESCRIBIR NUEVO PASSWORD EN EL SECTOR TRAILER
-                //data = passwordDesarrollo();
-				// ESCRIBIMOS NUEVO SECTOR TRAILER
-				//data = MainPrincipal.SECTOR_TRAILER_L01;
+				//cipher = aes.encrypt(dataString, Main.encryptionKey);
+				 
+				// ESCRIBIMOS NUEVO SECTOR TRAILER 
+				data = MainPrincipal.SECTOR_TRAILER_L01;
+				//MfBlock block = BlockResolver.resolveBlock(MemoryLayout.CLASSIC_1K, sectorId, blockId, data);
 				
-                // ESCRIBE DATO SIN CIFRADO
-                MfBlock block = BlockResolver.resolveBlock(MemoryLayout.CLASSIC_1K, sectorId, blockId, data);
+                // CIFRAR Y ESCRIBIR UN DATO - IS - IT (ENCRIPTAR HEX|BYTE|HEX PARA BLOQUES)
+				cipher = aes.encrypt(dataString, MainPrincipal.ENCRYPTION_KEY_AES);
+                MfBlock block = BlockResolver.resolveBlock(MemoryLayout.CLASSIC_1K, sectorId, blockId, cipher);
+                 
+                
+                
                 // ESCRIBIMOS DATA CON CIFRADO
                 //MfBlock block = BlockResolver.resolveBlock(MemoryLayout.CLASSIC_1K, sectorId, blockId, cipher);
                 
@@ -228,20 +240,35 @@ public final class MifareUtils {
             } catch (Exception e) { 
 				e.printStackTrace();
 			}
-            if (written) { 
+            if (written) 
+            { 
                 blockData = readMifareClassic1KBlock(reader, access);
+                if (blockData == null)
+                {
+                	MainPrincipal.ingresarNuevoSector();
+                	return;
+                }
+                if (blockData.isEmpty())
+                {
+                	MainPrincipal.ingresarNuevoSector();
+                	return;
+                }
+                
                 a = hexStringToBytes(blockData);
             	blockData = new String(a, StandardCharsets.UTF_8);
             	
                 System.out.print(Main.fechaHora() + " -- Nueva data del bloque: ");
-                if (blockData == null) {
+                if (blockData == null) 
+                {
                     // Failed to read block
                     System.out.println("<Failed to read block>");
-                } else {
+                } else 
+                {
                     // Block read
                 	String decrypted = "";
-                	try {
-						decrypted = aes.decrypt(cipher, Main.encryptionKey);
+                	try 
+                	{
+						decrypted = aes.decrypt(cipher, MainPrincipal.ENCRYPTION_KEY_AES);
 					} catch (Exception e) 
 					{ 
 						e.printStackTrace();
@@ -249,11 +276,13 @@ public final class MifareUtils {
                     System.out.println(decrypted + " (Key " + access.getKey() + ": " + key + ")");
                     //System.out.println(blockData + " (Key " + access.getKey() + ": " + key + ")");
                     
-                }
+                } 
             }
-            Main.ingresarNuevaData();
+            //MainPrincipal.ingresarNuevaData();
+            //MainPrincipal.ingresarNuevoSector();
         }
     }
+    //region CLAVES ESTATICAS SIN USO 
     /***
      * Password Simple Desarrollo 
      * @return un byte[]
@@ -299,7 +328,7 @@ public final class MifareUtils {
 		return dtPassword;
 		
 	}
-    
+    //endregion
     
     
     
@@ -309,13 +338,19 @@ public final class MifareUtils {
      * @param access the access
      * @return a string representation of the block data, null if the block can't be read
      */
-    private static String readMifareClassic1KBlock(MfReaderWriter reader, MfAccess access)
-            throws CardException {
+    private static String readMifareClassic1KBlock(MfReaderWriter reader, MfAccess access)throws CardException 
+    {
         String data = null;
-        try {
+        try 
+        {
             MfBlock block = reader.readBlock(access)[0];
             
             data = bytesToHexString(block.getData());
+            AES aes = new AES();
+            
+            String decrypted = aes.decrypt(hexStringToBytes(data), MainPrincipal.ENCRYPTION_KEY_AES);
+            //Main.printLog("Texto desencriptado CIPHER >> " + decrypted);
+            
             /*
             String dataTrasladada = "9E71C35D7266B5BF3D4A6A5256C91759";
             // DESENCRIPTANDO..
@@ -371,10 +406,12 @@ public final class MifareUtils {
     private static void dumpMifareClassic1KBlock(MfReaderWriter reader, MfCard card, int sectorId, int blockId, List<String> keysNOUSO) throws CardException {
         System.out.printf("Sector %02d block %02d: ", sectorId, blockId);
          
-        for (String key : keysMap) {
+        for (String key : keysMap) 
+        {
             // For each provided key...
         	//key = "AABBCCDDEEFF";
-            if (isValidMifareClassic1KKey(key)) {
+            if (isValidMifareClassic1KKey(key)) 
+            {
                 // CLAVES LISTADO
             	//byte[] keyBytes = hexStringToBytes(key);
             	// CLAVE A DESARROLLO
@@ -386,14 +423,18 @@ public final class MifareUtils {
                 // Reading with key A
                 MfAccess access = new MfAccess(card, sectorId, blockId, Key.A, keyBytes); 
                 String blockData = readMifareClassic1KBlock(reader, access);
-                if (blockData == null) {
+                if (blockData == null) 
+                {
                     // Reading with key B
                     access = new MfAccess(card, sectorId, blockId, Key.B, keyBytes);
                     blockData = readMifareClassic1KBlock(reader, access);
                 }
-                if (blockData != null) {
+                if (blockData != null) 
+                {
                     // Block read
-                    System.out.println(blockData + " (Key " + access.getKey() + ": " + key + ")");
+                    //System.out.println(blockData + " (Key " + access.getKey() + ": " + key + ")");
+                	System.out.println(blockData);
+
                     keysMap.set(0, key);	// MOVEMOS EL KEY AL PRINCIPIO PARA EL SIGUIENTE ESCANEO 
                     return;
                 }
