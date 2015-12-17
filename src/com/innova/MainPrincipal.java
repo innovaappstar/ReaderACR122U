@@ -1,26 +1,37 @@
 package com.innova;
 
-import static com.innova.HexUtils.hexStringToBytes;
-
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
+import java.security.Key;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Arrays; 
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.KeyGenerator;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.spec.SecretKeySpec;
 import javax.smartcardio.CardException;
 
+import org.apache.commons.logging.Log;
 import org.nfctools.mf.MfCardListener;
 import org.nfctools.mf.MfReaderWriter;
 import org.nfctools.mf.card.MfCard;
 
-import com.aes.AES;
+import com.aes.AES_OLD; 
+import com.aes.AESEncrypt;
+import com.operaciones.Operaciones;
 
 
 public class MainPrincipal {
@@ -61,7 +72,15 @@ public class MainPrincipal {
 	public static String STR_TRANSACCION_FORMAT	= "00000#0000#00000"; //"0000000000000000";
 	//FORMATO PARA DETALLE DE TARJETA (COD#DNI  || TIPO#FECHA)
 	public static String STR_DETALLE_TARJETA_FORMAT	= "0000000#00000000"; //"0000000000000000";
+	public static String STR_DETALLE_TARJETA_FO	= ""; //"0000000000000000";
 	
+	
+	private static final String REGEX = "^([0-9A-Fa-f]{2})+$";
+    private static final String INPUT = "7C91EB94EDD19DED0A7B444F94D4DAEF"; //"7C91EB94EDD19DED0A7B444F94D4DAEF" 
+    private static Pattern pattern;
+    private static Matcher matcher;
+
+     
 	/**
 	 * KEYS DE DESARROLLO 
 	 **/ 
@@ -77,15 +96,17 @@ public class MainPrincipal {
 	/**
 	 * CÓDIGOS DE TIPOS DE TARJETAS  
 	 **/
-	public static int COD_TARJETA_TIPO_GENERAL 		= 11;
-	public static int COD_TARJETA_TIPO_ESTUDIANTE 	= 12;
-	public static int COD_TARJETA_TIPO_CONDUCTOR 	= 13;
+	public static int COD_TARJETA_TIPO_GENERAL 			= 11;
+	public static int COD_TARJETA_TIPO_ESTUDIANTE 		= 12;
+	public static int COD_TARJETA_TIPO_UNIVERSITARIO	= 13;
+	public static int COD_TARJETA_TIPO_CONDUCTOR 		= 14;
 	
 	/**
 	 * FECHAS DE VENCIMIENTO REFERENCIA 
 	 **/
-	public static String FECHA_VENCIMIENTO_TARJETA_GENERAL 		= "12/12/2020"; // SEGUN BD 2020-09-18 12:00:00.000
-	public static String FECHA_VENCIMIENTO_TARJETA_ESTUDIANTE 	= "12/12/2016"; // SEGUN BD -----------------------
+	public static String FECHA_VENCIMIENTO_TARJETA_GENERAL 			= "12/12/2020"; // SEGUN BD 2020-09-18 12:00:00.000
+	public static String FECHA_VENCIMIENTO_TARJETA_ESTUDIANTE 		= "12/12/2016"; // SEGUN BD -----------------------
+	public static String FECHA_VENCIMIENTO_TARJETA_UNIVERSITARIO 	= "12/12/2016"; // SEGUN BD -----------------------
 	
 	
 	
@@ -105,6 +126,21 @@ public class MainPrincipal {
 			mostrarOpciones(args);
 		} catch (IOException e) {}
 	}
+	
+   
+    
+    public static void comprobarCoincidencia()
+    {
+        pattern = Pattern.compile(REGEX);
+        matcher = pattern.matcher(INPUT);
+
+        System.out.println("Current REGEX is: "+REGEX);
+        System.out.println("Current INPUT is: "+INPUT);
+
+        System.out.println("lookingAt(): "+matcher.lookingAt());
+        System.out.println("matches(): "+matcher.matches());
+    }
+	
 	
 	/**
 	 * @param min int valor mínimo del rango.
@@ -168,7 +204,7 @@ public class MainPrincipal {
 		strb.replace(start, end, str);
 		
 		strb.setLength(16);
-		
+		//printLog(strb.toString());
 		return strb.toString();
 	}
 	
@@ -219,9 +255,9 @@ public class MainPrincipal {
 		// BSALDO-01 SALDO
 		strb.replace(start, end, str); 
 		
-		printLog(strb.length() + " << Size StringBuilder");
+		//printLog(strb.length() + " << Size StringBuilder");
 		strb.setLength(16);
-		
+		printLog(strb.toString());
 		return strb.toString();
 	}
 	
@@ -283,7 +319,8 @@ public class MainPrincipal {
 		String fechaExpiracionTarjeta 	= Integer.toHexString(Integer.valueOf(fechaExpiracion));
 		
 		
-		
+		//printLog((Integer.decode("0x" + fechaExpiracionTarjeta)) + " << decimal convertido.."); 
+
 		StringBuilder strb = new StringBuilder(STR_DETALLE_TARJETA_FORMAT);
 		int start 	= 7 - tipTarjeta.length();	// 1 	--> 0000001
 		int end		= 7;
@@ -374,15 +411,19 @@ public class MainPrincipal {
         	 * LOS PARÁMETROS QUE VARIARAN SERÁN : 
         	 * formatDetalleTarjeta
         	 * formatDetalleTarjetaL02
-        	 * 
+        	 * NOTA : TODA TARJETA TENDRA EL MISMO PROCEDIMIENTO CON LA EXCEPCIÓN DE QUE 
+        	 * VARIARÁ EN EL SECTOR 3 AL GRABAR LOS DETALLES DE LA TARJETA:
+        	 * COD TARJETA - DNI
+        	 * TIPO TARJETA - FECHA VENCIMIENTO
         	 */
         	
         	
         	//write[4] = scanner.next().substring(0, 16);
         	//write[4] = formatSaldo(0f);	// INFORMACIÓN DEL SALDO
         	//write[4] = formatTransacciones(0f);	// HISTORIAL TRANSACCIONES
-        	//write[4] = formatDetalleTarjeta(14, 69145146);	// CODTARJETA-DNI
-        	write[4] = formatDetalleTarjetaL02(COD_TARJETA_TIPO_CONDUCTOR, FECHA_VENCIMIENTO_TARJETA_GENERAL);	// TIPO TARJETA - FECHA VENCIMIENTO
+        	// VARIANTES DETALLE TARJETA
+        	//write[4] = formatDetalleTarjeta(15, 46858258);	// CODTARJETA-DNI
+        	write[4] = formatDetalleTarjetaL02(COD_TARJETA_TIPO_UNIVERSITARIO, FECHA_VENCIMIENTO_TARJETA_UNIVERSITARIO);	// TIPO TARJETA - FECHA VENCIMIENTO
         	//write[4] = "0000000000000000";
         	
         	
@@ -400,7 +441,7 @@ public class MainPrincipal {
         		// ENCRIPTAMOS CADENA
         		try 
             	{
-            		AES aes = new AES(); 
+            		AES_OLD aes = new AES_OLD(); 
             		// ENCRIPTAR 
     				byte[] cipher = aes.encrypt(salida, ENCRYPTION_KEY_AES);
     				String str = new String(cipher, StandardCharsets.UTF_8);
@@ -419,7 +460,7 @@ public class MainPrincipal {
         	  
         } else if (accion == 4) 	// TRABAJANDO CON LOS OPERADORES DE BITS...
         {  
-             //printLog(KEY(IDKEY.KEY_B).length + " << SECTOR TRAILER SIZE ");
+            //printLog(KEY(IDKEY.KEY_B).length + " << SECTOR TRAILER SIZE ");
             //printLog(formatDetalleTarjeta(13,47602603) + " << DETALLE FORMATO "); 
         	String salida = formatDetalleTarjetaL02(0xd, "10/12/2015");
         	if (salida.equals(VACIO))
@@ -441,11 +482,94 @@ public class MainPrincipal {
 				printLog("Error" + e.getMessage().toString());
 			}
     		*/
-             
-             
-             
+               
+        } else if (accion == 5)
+        {
+        	Operaciones operaciones = new Operaciones();
+        	printLog("FORMATO DE SALDO:\n" + operaciones.formatSaldo(10f));
+        } else if (accion == 6)
+        {
+        	try 
+        	{
+				correrCifrado();
+			} catch (Exception e) 
+			{
+				e.printStackTrace();
+				printLog(e.getMessage() + " << ERROR MESSAGE\n" + e.getMessage());
+			}
         }
+        
     }  
+    
+    public static void correrCifrado() throws Exception
+    {
+    	String textoCifrado	= "123456789012345";
+    	byte[] b 	= AESEncrypt.encrypt(textoCifrado);
+    	if (b.length > 0)
+    	{
+    		printLog(b.length + " TAMANIO DEL ARREGLO CIFRADO" );
+    		String texto	= AESEncrypt.decrypt(b);
+    		printLog(texto + " <<-- DESENCRIPTADO");
+    	}else
+    	{
+    		printLog(" EL ARREGLO NO TIENE VALORES LUEGO DE DESENCRIPTARLO...");
+    	}
+    	
+    }
+    
+    
+    
+    public static void Cifrado()
+    {
+    	//String datosCifrado = "123456789012345";
+    	String datosCifrado   = "ABCDJHFBHKDBNFK";
+        SecretKeySpec sks = null;
+        try {
+            SecureRandom sr = SecureRandom.getInstance("SHA1PRNG");
+            sr.setSeed("abcdefgheheheheheheeabcdefgheheheheheheeabcdefghehehehehehee".getBytes());
+            MainPrincipal.printLog(sr.getSeed(0) + " << GETSEED");
+            //sr.setSeed("12345678901234561234".getBytes());
+            KeyGenerator kg = KeyGenerator.getInstance("AES");
+            kg.init(128, sr);
+            sks = new SecretKeySpec((kg.generateKey()).getEncoded(), "AES");
+            
+        } catch (Exception e) {
+        }
+        // Encode the original data with AES
+        byte[] encodedBytes = null;
+        try {
+            Cipher c = Cipher.getInstance("AES");
+            c.init(Cipher.ENCRYPT_MODE, sks);
+            encodedBytes = c.doFinal(datosCifrado.getBytes());
+        } catch (Exception e) { 
+        }
+        printLog( sks.getAlgorithm() + "\nDatosCifrados Size\n" + datosCifrado.length() + "\n[ENCODED]:\n" + encodedBytes.length);
+
+        // Decode the encoded data with AES
+        byte[] decodedBytes = null;
+        try {
+            SecretKeySpec sks2 = null;
+            SecureRandom sr = SecureRandom.getInstance("SHA1PRNG");
+            sr.setSeed("abcdefgheheheheheheeabcdefgheheheheheheeabcdefghehehehehehee".getBytes());
+            //sr.setSeed("12345678901234561234".getBytes());
+            KeyGenerator kgs = KeyGenerator.getInstance("AES");
+            kgs.init(128, sr);
+            sks2 = new SecretKeySpec((kgs.generateKey()).getEncoded(), "AES");
+        	
+            Cipher c = Cipher.getInstance("AES");
+            c.init(Cipher.DECRYPT_MODE, sks2);
+            decodedBytes = c.doFinal(encodedBytes);
+        } catch (Exception e) { 
+        }
+        if (decodedBytes != null)
+        {
+            printLog("[DECODED]:\n" + new String(decodedBytes) + "\n");	
+        } else
+        {
+        	printLog("BYTESDECODIFICADOS NULL ");
+        }
+    }
+    
     
     /**
      * @param idkey IDKEY enum identificador...

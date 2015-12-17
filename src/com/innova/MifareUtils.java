@@ -46,7 +46,7 @@ import org.nfctools.mf.card.MfCard;
 import org.nfctools.mf.classic.Key;
 import org.nfctools.mf.classic.MemoryLayout;
 
-import com.aes.AES;
+import com.aes.AES_OLD;
 import com.innova.MainPrincipal.IDKEY;
 
 /**
@@ -166,7 +166,7 @@ public final class MifareUtils {
     public static void writeToMifareClassic1KCard(MfReaderWriter reader, MfCard card, int sectorId, int blockId, String key, String dataString)
             throws CardException 
             {
-    	AES aes = new AES(); 
+    	AES_OLD aes = new AES_OLD(); 
     	byte[] cipher = null;
         if (!isValidMifareClassic1KKey(key)) {
             System.out.println("The key " + key + "is not valid.");
@@ -346,7 +346,7 @@ public final class MifareUtils {
             MfBlock block = reader.readBlock(access)[0];
             
             data = bytesToHexString(block.getData());
-            AES aes = new AES();
+            AES_OLD aes = new AES_OLD();
             
             String decrypted = aes.decrypt(hexStringToBytes(data), MainPrincipal.ENCRYPTION_KEY_AES);
             //Main.printLog("Texto desencriptado CIPHER >> " + decrypted);

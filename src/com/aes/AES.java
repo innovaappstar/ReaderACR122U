@@ -1,74 +1,91 @@
-package com.aes;
+package com.aes; 
 
-import java.security.*;
-import java.security.spec.InvalidKeySpecException;
-import javax.crypto.*;
-import javax.crypto.spec.IvParameterSpec;
+import java.security.SecureRandom;
+
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
+
+import com.interfaces.IAES;
+ 
+
 /**
- * https://gist.github.com/bricef/2436364 
- **/
+ * Created by innovaapps on 15/12/2015.
+ * Simple clase que se encargará de
+ * la encriptación de los datos...
+ */
+public class AES implements IAES
+{
+    /**
+     * Define el algoritmo para la operación de la
+     * encriptación.
+     **/
+    private static String ALGORITMO_CIPHER	= "AES";
+    /**
+     * Define el algoritmo de generación de números
+     * seudoaleatorios utilizados por SHA-1.
+     **/
+    private static String ALGORITMO_SHA1 	= "SHA1PRNG";
+    /**
+     * Define tamanio de bits de cifrado.
+     **/
+    private static int TAMANIO_BITS 		= 0x80;
+    /**
+     * Define password de desarrollo.
+     **/
+    private static String KEY_DESARROLLO    = "abcdefghehehehehehee";
 
-public class AES 
-{ 
-	/**
-	 * Define formato de codificación de carácteres..
-	 **/
-	private static String FORMATO_UNICODE = "UTF-8";
-	/**
-	 * Define transformación cipher de 128 bits con algoritmo AES..
-	 **/
-	private static String TRANSFORM_CIPHER = "AES/CBC/NoPadding";
-	/**
-	 * Define proveedor de la clase cipher..
-	 **/
-	private static String PROVEEDOR_CIPHER = "SunJCE";
-	/**
-	 * Define parámetros del vector de inicialización
-	 * para la encriptación/desencriptación, debe tener 
-	 * longitud de 16 bytes.. 
-	 **/
-	private static String IV_CIPHER = "BCTEDNEAJDYHUJEJ"; 
-	/**
-	 * Define el algoritmo para la operación de la
-	 * encriptación. 
-	 **/
-	private static String ALGORITMO_CIPHER	= "AES";
-	
-	
-	static String IV3 = "AAAAGJEJEIWJIIIA";
-	static String IV2 = "AAAAAAAAAAAAXAAA"; 
-					  //"BBBBBBBBBBBBBBBB"; 
-	
-	static String plaintext = "test text 123\0\0\0"; /*Note null padding*/
-	static String encryptionKey = "0123456789abcdef"; 
-	
-	  public static byte[] encrypt(String plainText, String encryptionKey) throws Exception 
-	  {
-		/**
-		 * getInstance(NOMBRE_TRANSFORMACIÓN_SOLICITADA, PROVEEDOR)
-		 * TRANSFORMACION = ES UNA CADENA QUE DESCRIBRE EL FUNCIONAMIENTO... 
-		 * TRANSFORMACION : ALGORITMO/MÓDO/PADDING
-		 **/  
-		Cipher cipher 		= Cipher.getInstance(TRANSFORM_CIPHER, PROVEEDOR_CIPHER);
-		SecretKeySpec key 	= new SecretKeySpec(encryptionKey.getBytes(FORMATO_UNICODE), ALGORITMO_CIPHER);
-		
-		/**
-		 *  init (int OPMODE, clave  fundamental, AlgorithmParameterSpec  params)
-		 *	Inicializa esta cifra con una clave y un conjunto de parámetros del algoritmo o VECTOR DE INICIALIZACIÓN. 
-		 **/ 
-		cipher.init(Cipher.ENCRYPT_MODE, key, new IvParameterSpec(IV_CIPHER.getBytes(FORMATO_UNICODE)));
-		//cipher.init(Cipher.ENCRYPT_MODE, key);
-		return cipher.doFinal(plainText.getBytes(FORMATO_UNICODE));
-	  }
-	
-	  public static String decrypt(byte[] cipherText, String encryptionKey) throws Exception
-	  {
-		Cipher cipher = Cipher.getInstance(TRANSFORM_CIPHER, PROVEEDOR_CIPHER);
-		SecretKeySpec key = new SecretKeySpec(encryptionKey.getBytes(FORMATO_UNICODE), ALGORITMO_CIPHER);
-		cipher.init(Cipher.DECRYPT_MODE, key, new IvParameterSpec(IV_CIPHER.getBytes(FORMATO_UNICODE)));
-		//cipher.init(Cipher.DECRYPT_MODE, key);
-		return new String(cipher.doFinal(cipherText),FORMATO_UNICODE);
-	  }
+    /**
+     * Simple función que se encargará de encriptar textos planos
+     * y regresar un arreglo de bytes.
+     * @param plainText String que se tendrá que cifrar.
+     * @return #cipher byte[] cifrado...
+     * getInstance(NOMBRE_TRANSFORMACIÓN_SOLICITADA, PROVEEDOR)
+     * TRANSFORMACION = ES UNA CADENA QUE DESCRIBRE EL FUNCIONAMIENTO...
+     * TRANSFORMACION : ALGORITMO/MÓDO/PADDING
+     *
+     * init (int OPMODE, clave  fundamental, AlgorithmParameterSpec  params)
+     * Inicializa esta cifra con una clave y un conjunto de parámetros del algoritmo o VECTOR DE INICIALIZACIÓN.
+     **/
+    @Override
+    public byte[] encrypt(String plainText) throws Exception
+    {
+        Cipher cipher 		= Cipher.getInstance(ALGORITMO_CIPHER);
+        SecretKeySpec skey 	= new SecretKeySpec(getKey(), ALGORITMO_CIPHER);
 
+        cipher.init(Cipher.ENCRYPT_MODE, skey);
+        return cipher.doFinal(plainText.getBytes());
+    }
+
+    /**
+     * Simple función que desencriptará una arreglo de bytes
+     * y devolverá una cadena ...
+     * @param cipherText byte que contiene la tarjeta.
+     * @return String desencriptado.
+     **/
+    @Override
+    public String decrypt(byte[] cipherText) throws Exception
+    {
+        Cipher cipher 		= Cipher.getInstance(ALGORITMO_CIPHER);
+        SecretKeySpec skey 	= new SecretKeySpec(getKey(), ALGORITMO_CIPHER);
+        cipher.init(Cipher.DECRYPT_MODE, skey);
+        return new String(cipher.doFinal(cipherText));
+    }
+
+    /**
+     * Simple función que generará un cifrado de keys
+     * en formato byte[]
+     * @return key que se utilizará en {@link SecretKeySpec}
+     **/
+    private byte[] getKey() throws Exception
+    {
+        SecureRandom secureRandom	= SecureRandom.getInstance(ALGORITMO_SHA1);
+        KeyGenerator generadorKey 	= KeyGenerator.getInstance(ALGORITMO_CIPHER);
+        secureRandom.setSeed(KEY_DESARROLLO.getBytes());
+        generadorKey.init(TAMANIO_BITS, secureRandom);
+        SecretKey keySecreta 		= generadorKey.generateKey();
+        byte[] key 	= keySecreta.getEncoded();
+        return key;
+    }
 }

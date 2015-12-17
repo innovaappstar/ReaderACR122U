@@ -18,7 +18,7 @@ import org.nfctools.mf.MfCardListener;
 import org.nfctools.mf.MfReaderWriter;
 import org.nfctools.mf.card.MfCard;
 
-import com.aes.AES;
+import com.aes.AES_OLD;
 
 
 public class Main {
@@ -117,7 +117,7 @@ public class Main {
         	printLog(sb.toString());
         	try 
         	{
-        		AES aes = new AES();
+        		AES_OLD aes = new AES_OLD();
         		plaintext = plaintext + plaintext + plaintext + plaintext + plaintext + plaintext;
         		// ENCRIPTAR 
 				byte[] cipher = aes.encrypt(plaintext, encryptionKey);
@@ -138,7 +138,7 @@ public class Main {
         	 String dataTrasladada = "9E71C35D7266B5BF3D4A6A5256C91759";
              // DESENCRIPTANDO..
              byte[] byteCifrado = hexStringToBytes(dataTrasladada);
-             AES aes = new AES();
+             AES_OLD aes = new AES_OLD();
              
              String decrypted = "";
 			try {
