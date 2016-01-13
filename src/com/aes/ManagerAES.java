@@ -14,14 +14,14 @@ public class ManagerAES implements IAES
     {
         iAES    = new AES();
     }
+ 
+	@Override
+	public byte[] encrypt(byte[] data) throws Exception {
+		return iAES.encrypt(data);
+	}
 
-    @Override
-    public byte[] encrypt(String plainText) throws Exception {
-        return iAES.encrypt(plainText);
-    }
-
-    @Override
-    public String decrypt(byte[] cipherText) throws Exception {
-        return iAES.decrypt(cipherText);
-    }
+	@Override
+	public byte[] decrypt(byte[] encrypted) throws Exception {
+		return iAES.decrypt(encrypted);
+	}
 }

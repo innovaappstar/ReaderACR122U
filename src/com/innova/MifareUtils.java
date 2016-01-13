@@ -46,8 +46,11 @@ import org.nfctools.mf.card.MfCard;
 import org.nfctools.mf.classic.Key;
 import org.nfctools.mf.classic.MemoryLayout;
 
+import com.aes.AES;
 import com.aes.AES_OLD;
+import com.aes.ManagerAES;
 import com.innova.MainPrincipal.IDKEY;
+import com.operaciones.Operaciones;
 
 /**
  * Mifare utility class.
@@ -167,6 +170,7 @@ public final class MifareUtils {
             throws CardException 
             {
     	AES_OLD aes = new AES_OLD(); 
+    	ManagerAES managerAES 	= null;
     	byte[] cipher = null;
         if (!isValidMifareClassic1KKey(key)) {
             System.out.println("The key " + key + "is not valid.");
@@ -187,8 +191,7 @@ public final class MifareUtils {
         // KEY DESARROLLO NFC
         keyBytes = MainPrincipal.KEY(IDKEY.KEY_A);
         //keyBytes = MainPrincipal.KEY(IDKEY.KEY_A);
-        
-        
+         
         // Reading with key A
         MfAccess access = new MfAccess(card, sectorId, blockId, Key.A, keyBytes);
         String blockData = readMifareClassic1KBlock(reader, access);
@@ -204,8 +207,8 @@ public final class MifareUtils {
             // Failed to read block
             System.out.println("<Failed to read block>");
         } else {
-        	byte[] a = hexStringToBytes(blockData);
-        	blockData = new String(a, StandardCharsets.UTF_8);
+        	byte[] a 	= hexStringToBytes(blockData);
+        	blockData 	= new String(a, StandardCharsets.UTF_8);
             // Block read
         	//System.out.println(blockData + " (Key " + access.getKey() + ": " + key + ")");
         	System.out.println(blockData);
@@ -215,21 +218,26 @@ public final class MifareUtils {
             try 
             {
             	// ESCRIBIR DATA ENVÍADA POR EL USUARIO
-                byte[] data = hexStringToBytes(dataString);
+                //byte[] data = hexStringToBytes(dataString);
                 // APLICAMOS CIFRADO 
                 
         		// ENCRIPTAR 
 				//cipher = aes.encrypt(dataString, Main.encryptionKey);
 				 
 				// ESCRIBIMOS NUEVO SECTOR TRAILER 
-				data = MainPrincipal.SECTOR_TRAILER_L01;
+				//data = MainPrincipal.SECTOR_TRAILER_L01;
 				//MfBlock block = BlockResolver.resolveBlock(MemoryLayout.CLASSIC_1K, sectorId, blockId, data);
 				
                 // CIFRAR Y ESCRIBIR UN DATO - IS - IT (ENCRIPTAR HEX|BYTE|HEX PARA BLOQUES)
-				cipher = aes.encrypt(dataString, MainPrincipal.ENCRYPTION_KEY_AES);
+				//cipher = aes.encrypt(dataString, MainPrincipal.ENCRYPTION_KEY_AES);
+            	managerAES 	=  new ManagerAES();
+	    		try {
+					cipher = managerAES.encrypt(dataString.getBytes());
+				} catch (Exception e) {}	
+				
                 MfBlock block = BlockResolver.resolveBlock(MemoryLayout.CLASSIC_1K, sectorId, blockId, cipher);
                  
-                
+                MainPrincipal.printLog(cipher.length + " tamanio cipher");
                 
                 // ESCRIBIMOS DATA CON CIFRADO
                 //MfBlock block = BlockResolver.resolveBlock(MemoryLayout.CLASSIC_1K, sectorId, blockId, cipher);
@@ -241,42 +249,39 @@ public final class MifareUtils {
 				e.printStackTrace();
 			}
             if (written) 
-            { 
-                blockData = readMifareClassic1KBlock(reader, access);
-                if (blockData == null)
-                {
-                	MainPrincipal.ingresarNuevoSector();
-                	return;
-                }
-                if (blockData.isEmpty())
-                {
-                	MainPrincipal.ingresarNuevoSector();
-                	return;
-                }
-                
-                a = hexStringToBytes(blockData);
-            	blockData = new String(a, StandardCharsets.UTF_8);
-            	
-                System.out.print(Main.fechaHora() + " -- Nueva data del bloque: ");
-                if (blockData == null) 
-                {
-                    // Failed to read block
-                    System.out.println("<Failed to read block>");
-                } else 
-                {
-                    // Block read
-                	String decrypted = "";
-                	try 
-                	{
-						decrypted = aes.decrypt(cipher, MainPrincipal.ENCRYPTION_KEY_AES);
-					} catch (Exception e) 
-					{ 
-						e.printStackTrace();
-					}
-                    System.out.println(decrypted + " (Key " + access.getKey() + ": " + key + ")");
-                    //System.out.println(blockData + " (Key " + access.getKey() + ": " + key + ")");
-                    
-                } 
+            {   
+            	try {
+            		a = hexStringToBytes(blockData);
+                	blockData = new String(a, StandardCharsets.UTF_8);
+                	
+                    System.out.print(Main.fechaHora() + " -- Nueva data del bloque: ");
+                    if (blockData == null) 
+                    {
+                        // Failed to read block
+                        System.out.println("<Failed to read block>");
+                    } else 
+                    {
+                        // Block read
+                    	String decrypted = "";
+                    	try 
+                    	{
+                    		decrypted = new String(managerAES.decrypt(cipher));
+    						//decrypted = aes.decrypt(cipher, MainPrincipal.ENCRYPTION_KEY_AES);
+    						
+    					} catch (Exception e) 
+    					{ 
+    						e.printStackTrace();
+    					}
+                        System.out.println(decrypted + " (Key " + access.getKey() + ": " + key + ")");
+                        //System.out.println(blockData + " (Key " + access.getKey() + ": " + key + ")");
+                        
+                    }
+				} catch (Exception e) 
+				{
+					MainPrincipal.printLog(e.getMessage());
+					// TODO: handle exception
+				}
+                 
             }
             //MainPrincipal.ingresarNuevaData();
             //MainPrincipal.ingresarNuevoSector();
@@ -345,11 +350,11 @@ public final class MifareUtils {
         {
             MfBlock block = reader.readBlock(access)[0];
             
-            data = bytesToHexString(block.getData());
-            AES_OLD aes = new AES_OLD();
+            data = bytesToHexString(block.getData()); 
+            //ManagerAES managerAES = new ManagerAES();
             
-            String decrypted = aes.decrypt(hexStringToBytes(data), MainPrincipal.ENCRYPTION_KEY_AES);
-            //Main.printLog("Texto desencriptado CIPHER >> " + decrypted);
+            //MainPrincipal.printLog("\nDECODED :\n" + managerAES.decrypt(block.getData()));
+            
             
             /*
             String dataTrasladada = "9E71C35D7266B5BF3D4A6A5256C91759";
@@ -404,7 +409,7 @@ public final class MifareUtils {
      * @param keys the keys to be tested for reading
      */ 
     private static void dumpMifareClassic1KBlock(MfReaderWriter reader, MfCard card, int sectorId, int blockId, List<String> keysNOUSO) throws CardException {
-        System.out.printf("Sector %02d block %02d: ", sectorId, blockId);
+        System.out.printf("Sector Dump %02d block %02d: ", sectorId, blockId);
          
         for (String key : keysMap) 
         {
@@ -433,6 +438,24 @@ public final class MifareUtils {
                 {
                     // Block read
                     //System.out.println(blockData + " (Key " + access.getKey() + ": " + key + ")");
+                	/*
+                	if (!(HexUtils.isIntString(blockData)))
+                	{
+                		ManagerAES managerAES 	= new ManagerAES();   
+                        //String data     = ""; 
+                        try 
+                    	{  
+            				// DESENCRIPTANDO... 
+                        	AES aes = new AES();
+            				byte[] decipher = aes.decrypt(blockData.getBytes());
+            				blockData		= new String(decipher); 
+                    	} catch (Exception e) {
+            				MainPrincipal.printLog("Error  " + e.getMessage().toString());
+            			}
+                        
+                        
+                	}
+                	*/
                 	System.out.println(blockData);
 
                     keysMap.set(0, key);	// MOVEMOS EL KEY AL PRINCIPIO PARA EL SIGUIENTE ESCANEO 

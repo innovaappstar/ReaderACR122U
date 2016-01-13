@@ -7,6 +7,7 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
+import com.constantes.Constantes;
 import com.interfaces.IAES;
  
 
@@ -34,8 +35,11 @@ public class AES implements IAES
     /**
      * Define password de desarrollo.
      **/
-    private static String KEY_DESARROLLO    = "abcdefghehehehehehee";
-
+    private static String KEY_DESARROLLO    = "1234567890123456"; 
+    private byte[] keyDesarrollo 			= KEY_DESARROLLO.getBytes();
+ 
+    /*****************************************************************************************************/
+    
     /**
      * Simple función que se encargará de encriptar textos planos
      * y regresar un arreglo de bytes.
@@ -49,15 +53,13 @@ public class AES implements IAES
      * Inicializa esta cifra con una clave y un conjunto de parámetros del algoritmo o VECTOR DE INICIALIZACIÓN.
      **/
     @Override
-    public byte[] encrypt(String plainText) throws Exception
-    {
-        Cipher cipher 		= Cipher.getInstance(ALGORITMO_CIPHER);
-        SecretKeySpec skey 	= new SecretKeySpec(getKey(), ALGORITMO_CIPHER);
-
-        cipher.init(Cipher.ENCRYPT_MODE, skey);
-        return cipher.doFinal(plainText.getBytes());
+    public byte[] encrypt(byte[] data) throws Exception {
+        SecretKeySpec skeySpec = new SecretKeySpec(keyDesarrollo, ALGORITMO_CIPHER);
+        Cipher cipher = Cipher.getInstance(ALGORITMO_CIPHER);
+        cipher.init(Cipher.ENCRYPT_MODE, skeySpec);
+        byte[] encrypted = cipher.doFinal(data);
+        return encrypted;
     }
-
     /**
      * Simple función que desencriptará una arreglo de bytes
      * y devolverá una cadena ...
@@ -65,14 +67,16 @@ public class AES implements IAES
      * @return String desencriptado.
      **/
     @Override
-    public String decrypt(byte[] cipherText) throws Exception
-    {
-        Cipher cipher 		= Cipher.getInstance(ALGORITMO_CIPHER);
-        SecretKeySpec skey 	= new SecretKeySpec(getKey(), ALGORITMO_CIPHER);
-        cipher.init(Cipher.DECRYPT_MODE, skey);
-        return new String(cipher.doFinal(cipherText));
+    public byte[] decrypt(byte[] encrypted) throws Exception {
+        SecretKeySpec skeySpec = new SecretKeySpec(keyDesarrollo, ALGORITMO_CIPHER);
+        Cipher cipher = Cipher.getInstance(ALGORITMO_CIPHER);
+        cipher.init(Cipher.DECRYPT_MODE, skeySpec);
+        byte[] decrypted = cipher.doFinal(encrypted);
+        return decrypted;
     }
-
+    
+    
+    
     /**
      * Simple función que generará un cifrado de keys
      * en formato byte[]
@@ -80,6 +84,7 @@ public class AES implements IAES
      **/
     private byte[] getKey() throws Exception
     {
+        //SecureRandom secureRandom	= SecureRandom.getInstance(ALGORITMO_SHA1, "Crypto");
         SecureRandom secureRandom	= SecureRandom.getInstance(ALGORITMO_SHA1);
         KeyGenerator generadorKey 	= KeyGenerator.getInstance(ALGORITMO_CIPHER);
         secureRandom.setSeed(KEY_DESARROLLO.getBytes());
@@ -88,4 +93,5 @@ public class AES implements IAES
         byte[] key 	= keySecreta.getEncoded();
         return key;
     }
+    
 }

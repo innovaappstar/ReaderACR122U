@@ -12,8 +12,9 @@ public class Operaciones extends BaseFormato
 	 * @param k String es la key.
 	 * @return String de 16 bytes.
 	 */
-	public String formatSaldo(float m)
+	public String formatSaldo(Tarjeta tarjeta)
 	{
+		/*
 		Tarjeta tarjeta = new Tarjeta();
 		tarjeta.setAccion(1);
 		tarjeta.setSaldo(1110f);
@@ -31,10 +32,8 @@ public class Operaciones extends BaseFormato
 
 		tarjeta.setAccion(4);
 		MainPrincipal.printLog("FORMATO DETALLE 02 \n" + super.generarCadenaTransaccion(tarjeta));
-
+		*/
 		
-		if (m > 999f) 
-			return Constantes.VACIO;	// <<ERROR CODE 15 : FLOAT EXCEDIO DEL LÍMITE>> 
 		return super.generarCadenaTransaccion(tarjeta);
 	} 
 	

@@ -29,9 +29,13 @@ import org.nfctools.mf.MfCardListener;
 import org.nfctools.mf.MfReaderWriter;
 import org.nfctools.mf.card.MfCard;
 
+import com.aes.AES;
 import com.aes.AES_OLD; 
 import com.aes.AESEncrypt;
+import com.aes.ManagerAES;
+import com.beans.Tarjeta;
 import com.operaciones.Operaciones;
+import com.utils.ManagerUtils;
 
 
 public class MainPrincipal {
@@ -74,11 +78,7 @@ public class MainPrincipal {
 	public static String STR_DETALLE_TARJETA_FORMAT	= "0000000#00000000"; //"0000000000000000";
 	public static String STR_DETALLE_TARJETA_FO	= ""; //"0000000000000000";
 	
-	
-	private static final String REGEX = "^([0-9A-Fa-f]{2})+$";
-    private static final String INPUT = "7C91EB94EDD19DED0A7B444F94D4DAEF"; //"7C91EB94EDD19DED0A7B444F94D4DAEF" 
-    private static Pattern pattern;
-    private static Matcher matcher;
+	 
 
      
 	/**
@@ -127,230 +127,7 @@ public class MainPrincipal {
 		} catch (IOException e) {}
 	}
 	
-   
-    
-    public static void comprobarCoincidencia()
-    {
-        pattern = Pattern.compile(REGEX);
-        matcher = pattern.matcher(INPUT);
-
-        System.out.println("Current REGEX is: "+REGEX);
-        System.out.println("Current INPUT is: "+INPUT);
-
-        System.out.println("lookingAt(): "+matcher.lookingAt());
-        System.out.println("matches(): "+matcher.matches());
-    }
-	
-	
-	/**
-	 * @param min int valor mínimo del rango.
-	 * @param max int valor máximo del rango.
-	 * @return String hex al azar. 
-	 **/
-	//region return random hexadecimal
-	public static String randHex(int min, int max, int capacity) 
-	{ 
-	    Random rand = new Random(); 
-	    //	nextInt normalmente es exclusiva del valor superior,
-	    // por lo que añadir 1 para que sea incluido
-	    // Por encima de fórmula voluntad genera un entero aleatorio en un rango entre el mínimo (inclusive) y máximo (inclusive).
-	    int num = rand.nextInt((max - min) + 1) + min;  
-	    StringBuilder hexRandom = new StringBuilder(Integer.toHexString(num));
-	    
-	    if (hexRandom.length() != 6)
-	    	return VACIO;	// HEXADECIMAL NO PERMITIDO 
-	    
-	    hexRandom.setLength(capacity);
-	    return hexRandom.toString();
-	}
-	//endregion
-	
-	
-	//region FORMAT SALDO Y TRANSACCIONES
-	/**
-	 * @param m float es el monto.
-	 * @param k String es la key.
-	 * @return String de 16 bytes.
-	 */
-	public static String formatSaldo(float m)
-	{
-		if (m > 999f) 
-			return VACIO;	// <<ERROR CODE 15 : FLOAT EXCEDIO DEL LÍMITE>>
-		
-		// PARSEAMOS FLOAT A DECIMAL
-		String f = String.format(MON_FORMAT, m).replace(",", "");
-		// CONVERTIMOS DECIMAL A HEX 
-		f	= Integer.toHexString(Integer.valueOf(f));
-		
-		StringBuilder strb = new StringBuilder(STR_TRANSACCION_FORMAT);
-		int start 	= 5 - f.length();	// 4 -> 1.25
-		int end		= 5;
-		String str	= f;
-		
-		// simple conversión
-		printLog((Integer.decode("0x" + f)) + " << decimal convertido..");
-		// BSALDO-01 SALDO
-		strb.replace(start, end, str); 
-		
-		// BSALDO-02 BYTES DE INTEGRIDAD
-		start 		= 6;
-		end			= 10;
-		str			= randHex(2222222, 9999999, 0x04); 
-		if (str.length() == 0)
-		{
-			return VACIO;
-		}
-		
-		strb.replace(start, end, str);
-		
-		strb.setLength(16);
-		//printLog(strb.toString());
-		return strb.toString();
-	}
-	
-	/**
-	 *  @param m float que simbolizará la nueva transacción.
-	 *  @param k String que contendra la key
-	 *  @return String {@link #formatTransacciones(float, String)}
-	 **/
-	public static String formatTransacciones(float m)
-	{
-		if (m > 999f) 
-			return VACIO;	// <<ERROR CODE 15 : FLOAT EXCEDIO DEL LÍMITE>>
-		  
-		String f = "";
-		// VALIDAR QUE SI NO CONTIENE UNA COMA ","
-		f 	= String.format(MON_FORMAT, m).replace(",", "");
-		f	= Integer.toHexString(Integer.valueOf(f));
-
-		StringBuilder strb = new StringBuilder(STR_TRANSACCION_FORMAT);
-		int start 	= 5 - f.length();	 
-		int end		= 5;
-		String str	= f;
-		
-		// simple conversión
-		printLog((Integer.decode("0x" + f)) + " << decimal convertido.."); 
-		// BSALDO-01 SALDO
-		strb.replace(start, end, str); 
-		
-		// BSALDO-02 BYTES DE INTEGRIDAD
-		start 		= 6;
-		end			= 10;
-		str			= randHex(2222222, 9999999, 0x04); 
-		if (str.length() == 0)
-		{
-			return VACIO;
-		}
-		
-		strb.replace(start, end, str);
-		
-		// TRANSACCION ACTUAL 
-		f 	= String.format(MON_FORMAT, m).replace(",", "");
-		f	= Integer.toHexString(Integer.valueOf(f));
-
-		start 	= 16 - f.length();	 
-		end		= 16;
-		str		= f;
-		 
-		// BSALDO-01 SALDO
-		strb.replace(start, end, str); 
-		
-		//printLog(strb.length() + " << Size StringBuilder");
-		strb.setLength(16);
-		printLog(strb.toString());
-		return strb.toString();
-	}
-	
-	/**
-	 * @param codigoTarjeta int es el código único de tarjeta 	(Identificador). 
-	 * @param dniUsuario int es el dni del usuario poseedor de la tarjeta 			(General). 
-	 * @return String de 16 bytes.
-	 */
-	
-	public static String formatDetalleTarjeta(int codigoTarjeta, int dniUsuario)
-	{
-		if (codigoTarjeta < 1 || String.valueOf(dniUsuario).length() != 8) 
-			return VACIO;	// <<ERROR CODE 15 : FLOAT EXCEDIO DEL LÍMITE>>
-		
-		// CONVERTIMOS DECIMAL A HEX 
-		String codTarjeta 			= Integer.toHexString(codigoTarjeta);
-		String dniUsuarioTarjeta 	= Integer.toHexString(dniUsuario);
-		
-		
-		
-		StringBuilder strb = new StringBuilder(STR_DETALLE_TARJETA_FORMAT);
-		int start 	= 7 - codTarjeta.length();	// 1 	--> 0000001
-		int end		= 7;
-		String str	= codTarjeta;
-		 
-		// BSALDO-01 SALDO
-		strb.replace(start, end, str); 
-		
-		// BSALDO-02 BYTES DE INTEGRIDAD
-		start 		= 16 - dniUsuarioTarjeta.length();
-		end			= 16;
-		str			= dniUsuarioTarjeta; 
-		if (str.length() == 0)
-		{
-			return VACIO;
-		}
-		
-		strb.replace(start, end, str);
-		
-		strb.setLength(16);
-		
-		return strb.toString();
-	}
-	
-	/**
-	 * @param codigoTarjeta int es el código único de tarjeta 	(Identificador). 
-	 * @param dniUsuario int es el dni del usuario poseedor de la tarjeta 			(General). 
-	 * @return String de 16 bytes.
-	 */
-	
-	public static String formatDetalleTarjetaL02(int tipoTarjeta, String fechaExpiracion)
-	{
-		if (tipoTarjeta < 1 || fechaExpiracion.length() != 10) 
-			return VACIO;	// <<ERROR CODE 15 : VALOR MUY CORTO>>
-		
-		// CONVERTIMOS DECIMAL A HEX 
-		String tipTarjeta 			= Integer.toHexString(tipoTarjeta);
-		fechaExpiracion = fechaExpiracion.replace("/", "");
-		String fechaExpiracionTarjeta 	= Integer.toHexString(Integer.valueOf(fechaExpiracion));
-		
-		
-		//printLog((Integer.decode("0x" + fechaExpiracionTarjeta)) + " << decimal convertido.."); 
-
-		StringBuilder strb = new StringBuilder(STR_DETALLE_TARJETA_FORMAT);
-		int start 	= 7 - tipTarjeta.length();	// 1 	--> 0000001
-		int end		= 7;
-		String str	= tipTarjeta;
-		 
-		// BSALDO-01 SALDO
-		strb.replace(start, end, str); 
-		
-		// BSALDO-02 BYTES DE INTEGRIDAD
-		start 		= 16 - fechaExpiracionTarjeta.length();
-		end			= 16;
-		str			= fechaExpiracionTarjeta; 
-		if (str.length() == 0)
-		{
-			return VACIO;
-		}
-		
-		strb.replace(start, end, str);
-		
-		strb.setLength(16);
-		
-		return strb.toString();
-	}
-	
-	
-	
-	
-	
-	
-	//endregion
+ 
 	
 	
     /**
@@ -416,160 +193,93 @@ public class MainPrincipal {
         	 * COD TARJETA - DNI
         	 * TIPO TARJETA - FECHA VENCIMIENTO
         	 */
-        	
-        	
+        	Tarjeta tarjeta = new Tarjeta();
+    		tarjeta.setAccion(2);
+    		tarjeta.setSaldo(51.355f);
+    		// VARIABLES
+    		tarjeta.setCodUsuarioTarjeta(12);
+    		tarjeta.setDniUsuarioTarjeta(49502503);
+    		tarjeta.setTipoUsuarioTarjeta(11);	// 11 - 12 - 13 - 14  
+    		tarjeta.setFechaVencimientoUsuarioTarjeta(FECHA_VENCIMIENTO_TARJETA_GENERAL);
+    		
+     		Operaciones operaciones = new Operaciones(); 
+    		
+    		String cadenaTarjeta	= operaciones.formatSaldo(tarjeta);
+    		printLog(" Cadena tarjeta --> " + cadenaTarjeta + "|" + cadenaTarjeta.length());
+			write[4]	= cadenaTarjeta; 
         	//write[4] = scanner.next().substring(0, 16);
         	//write[4] = formatSaldo(0f);	// INFORMACIÓN DEL SALDO
         	//write[4] = formatTransacciones(0f);	// HISTORIAL TRANSACCIONES
         	// VARIANTES DETALLE TARJETA
         	//write[4] = formatDetalleTarjeta(15, 46858258);	// CODTARJETA-DNI
-        	write[4] = formatDetalleTarjetaL02(COD_TARJETA_TIPO_UNIVERSITARIO, FECHA_VENCIMIENTO_TARJETA_UNIVERSITARIO);	// TIPO TARJETA - FECHA VENCIMIENTO
+        	//write[4] = formatDetalleTarjetaL02(COD_TARJETA_TIPO_UNIVERSITARIO, FECHA_VENCIMIENTO_TARJETA_UNIVERSITARIO);	// TIPO TARJETA - FECHA VENCIMIENTO
         	//write[4] = "0000000000000000";
         	
         	
         	writeToCards(write);	// ESCRIBIR
         } else if (accion == 3)
-        {
-        	sb = new StringBuilder();
-        	 
-        	//printLog(sb.toString());
-        	//String salida = formatTransacciones(0f, "KEYKEY");
-        	String salida = formatSaldo(0f); 
-        	if (salida.length() > 0)
-        	{
-        		printLog(salida);
-        		// ENCRIPTAMOS CADENA
-        		try 
-            	{
-            		AES_OLD aes = new AES_OLD(); 
-            		// ENCRIPTAR 
-    				byte[] cipher = aes.encrypt(salida, ENCRYPTION_KEY_AES);
-    				String str = new String(cipher, StandardCharsets.UTF_8);
-    				printLog("Valor de texto (STANDARDCHARSETS.UTF8): " + str + " -- TAMANIO : " + cipher.length); 
-    				
-    				// DESENCRIPTANDO... 
-    				String decrypted = aes.decrypt(cipher, ENCRYPTION_KEY_AES);
-    				printLog("decrypt: " + decrypted);
-    			} catch (Exception e) {
-    				printLog("Error" + e.getMessage().toString());
-    			} 
-        	}else
-        	{
-        		printLog("OCURRIÓ UN ERROR");
-        	}
-        	  
-        } else if (accion == 4) 	// TRABAJANDO CON LOS OPERADORES DE BITS...
-        {  
-            //printLog(KEY(IDKEY.KEY_B).length + " << SECTOR TRAILER SIZE ");
-            //printLog(formatDetalleTarjeta(13,47602603) + " << DETALLE FORMATO "); 
-        	String salida = formatDetalleTarjetaL02(0xd, "10/12/2015");
-        	if (salida.equals(VACIO))
-        	{
-        		printLog("OCURRIÓ UN ERROR AL GENERAR CADENA DE DETALLE TARJETA L02");
-        		return;
-        	}
-
-            printLog(salida + " << DETALLE FORMATO "); 
-    		printLog((Integer.decode("0x" + salida.split("\\#")[0])) + " << decimal convertido.."); 
-
-            /*
-     		try 
-        	{
-     			AES aes = new AES(); 
-                String decrypted = aes.decrypt(hexStringToBytes("5E0ECE2D5688FC3780FF48BD642DB7B0"), Main.encryptionKey);
-                MainPrincipal.printLog("Texto desencriptado CIPHER >> " + decrypted);
-			} catch (Exception e) {
-				printLog("Error" + e.getMessage().toString());
-			}
-    		*/
-               
-        } else if (accion == 5)
-        {
-        	Operaciones operaciones = new Operaciones();
-        	printLog("FORMATO DE SALDO:\n" + operaciones.formatSaldo(10f));
-        } else if (accion == 6)
-        {
-        	try 
-        	{
-				correrCifrado();
+        { 
+    		Tarjeta tarjeta = new Tarjeta();
+    		tarjeta.setAccion(3);
+    		tarjeta.setSaldo(0f);
+    		// VARIABLES
+    		tarjeta.setCodUsuarioTarjeta(15);
+    		tarjeta.setDniUsuarioTarjeta(46858258);
+    		tarjeta.setTipoUsuarioTarjeta(11);
+    		tarjeta.setFechaVencimientoUsuarioTarjeta(FECHA_VENCIMIENTO_TARJETA_GENERAL);
+    		
+    		ManagerAES managerAES 	= new ManagerAES();
+    		Operaciones operaciones = new Operaciones(); 
+    		
+    		String cadenaTarjeta	= operaciones.formatSaldo(tarjeta);
+    		byte[] cipher = null;
+    		String cipherText = "";
+			try { 
+	    		
 			} catch (Exception e) 
 			{
 				e.printStackTrace();
-				printLog(e.getMessage() + " << ERROR MESSAGE\n" + e.getMessage());
-			}
+			} 
+        } else if (accion == 4) 	// TRABAJANDO CON LOS OPERADORES DE BITS...
+        {} else if (accion == 5)
+        {
+        	printLog(HexUtils.isIntString("1111112a") + "");
+        	
+        } else if (accion == 6)
+        {
+        	  
+        	 
+        } else if (accion == 7)
+        {
+    		Tarjeta tarjeta = new Tarjeta();
+    		tarjeta.setAccion(3);
+    		tarjeta.setSaldo(0f);
+    		// VARIABLES
+    		tarjeta.setCodUsuarioTarjeta(15);
+    		tarjeta.setDniUsuarioTarjeta(46858258);
+    		tarjeta.setTipoUsuarioTarjeta(11);
+    		tarjeta.setFechaVencimientoUsuarioTarjeta(FECHA_VENCIMIENTO_TARJETA_GENERAL);
+    		
+    		ManagerAES managerAES 	= new ManagerAES();
+    		Operaciones operaciones = new Operaciones(); 
+    		
+    		String cadenaTarjeta	= operaciones.formatSaldo(tarjeta);
+    		  
+            //String data     = "";
+            String hexCipher = "6BECD0CA87CC9108C86D4CA3AE5C85DD";
+            try 
+            {
+                byte[] cipher 	= managerAES.encrypt(cadenaTarjeta.getBytes());
+                printLog("Tamaño cipher : " + cipher.length + 
+                			"\nHex Cipher : \n" + HexUtils.bytesToHexString(cipher)); 
+            }catch (Exception e)
+            {
+            	printLog(e.getMessage());
+            }
         }
         
     }  
-    
-    public static void correrCifrado() throws Exception
-    {
-    	String textoCifrado	= "123456789012345";
-    	byte[] b 	= AESEncrypt.encrypt(textoCifrado);
-    	if (b.length > 0)
-    	{
-    		printLog(b.length + " TAMANIO DEL ARREGLO CIFRADO" );
-    		String texto	= AESEncrypt.decrypt(b);
-    		printLog(texto + " <<-- DESENCRIPTADO");
-    	}else
-    	{
-    		printLog(" EL ARREGLO NO TIENE VALORES LUEGO DE DESENCRIPTARLO...");
-    	}
-    	
-    }
-    
-    
-    
-    public static void Cifrado()
-    {
-    	//String datosCifrado = "123456789012345";
-    	String datosCifrado   = "ABCDJHFBHKDBNFK";
-        SecretKeySpec sks = null;
-        try {
-            SecureRandom sr = SecureRandom.getInstance("SHA1PRNG");
-            sr.setSeed("abcdefgheheheheheheeabcdefgheheheheheheeabcdefghehehehehehee".getBytes());
-            MainPrincipal.printLog(sr.getSeed(0) + " << GETSEED");
-            //sr.setSeed("12345678901234561234".getBytes());
-            KeyGenerator kg = KeyGenerator.getInstance("AES");
-            kg.init(128, sr);
-            sks = new SecretKeySpec((kg.generateKey()).getEncoded(), "AES");
-            
-        } catch (Exception e) {
-        }
-        // Encode the original data with AES
-        byte[] encodedBytes = null;
-        try {
-            Cipher c = Cipher.getInstance("AES");
-            c.init(Cipher.ENCRYPT_MODE, sks);
-            encodedBytes = c.doFinal(datosCifrado.getBytes());
-        } catch (Exception e) { 
-        }
-        printLog( sks.getAlgorithm() + "\nDatosCifrados Size\n" + datosCifrado.length() + "\n[ENCODED]:\n" + encodedBytes.length);
-
-        // Decode the encoded data with AES
-        byte[] decodedBytes = null;
-        try {
-            SecretKeySpec sks2 = null;
-            SecureRandom sr = SecureRandom.getInstance("SHA1PRNG");
-            sr.setSeed("abcdefgheheheheheheeabcdefgheheheheheheeabcdefghehehehehehee".getBytes());
-            //sr.setSeed("12345678901234561234".getBytes());
-            KeyGenerator kgs = KeyGenerator.getInstance("AES");
-            kgs.init(128, sr);
-            sks2 = new SecretKeySpec((kgs.generateKey()).getEncoded(), "AES");
-        	
-            Cipher c = Cipher.getInstance("AES");
-            c.init(Cipher.DECRYPT_MODE, sks2);
-            decodedBytes = c.doFinal(encodedBytes);
-        } catch (Exception e) { 
-        }
-        if (decodedBytes != null)
-        {
-            printLog("[DECODED]:\n" + new String(decodedBytes) + "\n");	
-        } else
-        {
-        	printLog("BYTESDECODIFICADOS NULL ");
-        }
-    }
-    
+  
     
     /**
      * @param idkey IDKEY enum identificador...

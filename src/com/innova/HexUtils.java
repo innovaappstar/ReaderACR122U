@@ -33,6 +33,11 @@ public final class HexUtils {
     /** Regex pattern for hexadecimal strings */
     private static final Pattern HEX_STRING_PATTERN = Pattern.compile("^([0-9A-Fa-f]{2})+$");
     
+    /** Regex pattern for int strings */
+    private static final Pattern INT_STRING_PATTERN = Pattern.compile("^([0-9]{1})+$");
+    /** Regex pattern for int strings */
+    private static final Pattern STR_STRING_PATTERN = Pattern.compile("^(\\s+[A-Za-z]{1})+$");
+    
     /** Array of all hexadecimal chars */
     private static final char[] HEX_CHARS = "0123456789ABCDEF".toCharArray();
     
@@ -46,6 +51,25 @@ public final class HexUtils {
     public static boolean isHexString(String s) {
         return (s != null) && HEX_STRING_PATTERN.matcher(s).matches();
     }
+    
+    /**
+     * @param s a string
+     * @return true if the provided string is INT, false otherwise
+     */
+    public static boolean isIntString(String s) 
+    {
+        return (s != null) && INT_STRING_PATTERN.matcher(s).matches();
+    }
+    
+    /**
+     * @param s a string
+     * @return true if the provided string is INT, false otherwise
+     */
+    public static boolean isString(String s) 
+    {
+        return (s != null) && STR_STRING_PATTERN.matcher(s).matches();
+    }
+    
     
     /**
      * @param s a hex string

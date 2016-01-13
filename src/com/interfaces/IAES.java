@@ -5,6 +5,7 @@ package com.interfaces;
  */
 public interface IAES
 {
-    public byte[] encrypt(String plainText) throws Exception;
-    public String decrypt(byte[] cipherText) throws Exception;
+    public byte[] encrypt(byte[] data) throws Exception;
+    public byte[] decrypt(byte[] encrypted) throws Exception;
+
 }
