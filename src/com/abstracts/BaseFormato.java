@@ -78,7 +78,7 @@ public abstract class BaseFormato
 		case 2:	// RETORNA CADENA DE TRANSACCIÓN HISTORIAL SALDO
 			if (tarjeta.getSaldo() > 999f) 
 				break;	
-			result			= ConvertToHex(tarjeta.getSaldo());
+			result			= ConvertToHex(0f);	// El primer valor no se toca..
 			capacidad[0] 	= isBlockTransaccion01 - result.length();
 			capacidad[1]	= isBlockTransaccion01;
 			
@@ -86,6 +86,7 @@ public abstract class BaseFormato
 			str				= getStringBuilder(capacidad, str.toString(), result); 
 			
 			// Segundo valor por default de saldo. 
+			result			= ConvertToHex(tarjeta.getSaldo());	// El segundo valor será igual q el saldo
 			capacidad[0] 	= isBlockTransaccion02 - result.length();
 			capacidad[1]	= isBlockTransaccion02;
 			//result			= managerUtils.decimalToHex(Integer.valueOf(result));	// Segundo saldo... 

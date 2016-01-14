@@ -195,7 +195,7 @@ public class MainPrincipal {
         	 */
         	Tarjeta tarjeta = new Tarjeta();
     		tarjeta.setAccion(2);
-    		tarjeta.setSaldo(51.355f);
+    		tarjeta.setSaldo(151.355f);
     		// VARIABLES
     		tarjeta.setCodUsuarioTarjeta(12);
     		tarjeta.setDniUsuarioTarjeta(49502503);
